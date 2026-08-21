@@ -9,7 +9,6 @@ import io.github.qigao.simpledsl.gradle.catalog.DependencyCatalogSnapshot
 import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
 import io.github.qigao.simpledsl.gradle.module.SimpleDslJavaLibraryPlugin
 import io.github.qigao.simpledsl.gradle.module.SimpleDslSpringServicePlugin
-import org.gradle.api.GradleException
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Test
 
@@ -27,7 +26,8 @@ class FeaturePluginsTest {
     void webCapabilityActivatesServiceDependenciesWithoutPublicFeaturePluginId() {
         def project = projectWithCatalog()
         project.pluginManager.apply(SimpleDslSpringServicePlugin)
-        project.pluginManager.apply(SimpleDslWebPlugin)
+
+        project.extensions.getByType(SimpleDslExtension).web()
 
         def model = project.extensions.getByType(SimpleDslModuleModel)
         assertTrue(model.capabilities.get().contains('web'))
@@ -65,14 +65,12 @@ class FeaturePluginsTest {
         def project = projectWithCatalog()
         project.pluginManager.apply(SimpleDslJavaLibraryPlugin)
 
-        def error = assertThrows(GradleException) {
-            project.pluginManager.apply(SimpleDslNativePlugin)
+        def error = assertThrows(SimpleDslConfigurationException) {
+            project.extensions.getByType(SimpleDslExtension).nativeImage()
         }
 
-        assertTrue(error.cause instanceof SimpleDslConfigurationException)
-        def cause = error.cause as SimpleDslConfigurationException
-        assertTrue(cause.message.contains('SimpleDSL configuration error'))
-        assertTrue(cause.message.contains("capability 'native' is not supported"))
+        assertTrue(error.message.contains('SimpleDSL configuration error'))
+        assertTrue(error.message.contains("capability 'native' is not supported"))
     }
 
     private static def projectWithCatalog() {
