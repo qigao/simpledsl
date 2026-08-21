@@ -65,11 +65,9 @@ final class SimpleDslDoctorValidator {
                 }
             }
 
-            spec.externalPluginAliases.each { alias ->
-                if (!catalog.plugins().any { it.alias == alias }) {
-                    violations.add("capability '${capabilityId}' references unknown plugin alias '${alias}'")
-                }
-            }
+            // externalPluginIds are implementation plugins owned by the SimpleDSL
+            // release. They are intentionally not resolved through the consumer
+            // dependency catalog, so there is no consumer alias to validate here.
         }
 
         Collections.unmodifiableList(new ArrayList<>(violations))
