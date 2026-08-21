@@ -6,11 +6,11 @@ plugins {
 }
 
 java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(17))
+    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 }
 
 tasks.withType<JavaCompile>().configureEach {
-    options.release.set(17)
+    options.release.set(21)
     options.encoding = "UTF-8"
 }
 
