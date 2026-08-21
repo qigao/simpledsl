@@ -73,7 +73,6 @@ class PublishedConsumerContractTest {
         List<String> arguments = new ArrayList<>(Arrays.asList(tasks))
         arguments.add('--configuration-cache')
         arguments.add("-PsimpledslTestRepo=${requiredProperty('simpledsl.test.repo')}".toString())
-        arguments.add("-PsimpledslVersion=${requiredProperty('simpledsl.test.version')}".toString())
         arguments.add('--stacktrace')
         arguments
     }
@@ -82,6 +81,10 @@ class PublishedConsumerContractTest {
         File source = new File(requiredProperty('simpledsl.fixture.dir'))
         File target = temporaryDirectory.resolve(name).toFile()
         copyDirectory(source.toPath(), target.toPath())
+        File settings = new File(target, 'settings.gradle')
+        settings.text = settings.text.replace(
+                '@SIMPLEDSL_VERSION@',
+                requiredProperty('simpledsl.test.version'))
         target
     }
 
