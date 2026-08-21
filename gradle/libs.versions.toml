@@ -16,6 +16,7 @@ jooq-core = { module = "org.jooq:jooq", version.ref = "jooq" }
 jooq-meta = { module = "org.jooq:jooq-meta", version.ref = "jooq" }
 jsonschema2pojo-gradle = { module = "org.jsonschema2pojo:jsonschema2pojo-gradle-plugin", version.ref = "jsonschema2pojo" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 
 [plugins]
 plugin-publish = { id = "com.gradle.plugin-publish", version.ref = "plugin-publish" }
