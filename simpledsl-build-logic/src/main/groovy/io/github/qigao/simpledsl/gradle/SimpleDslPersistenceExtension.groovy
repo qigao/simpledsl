@@ -13,14 +13,14 @@ class SimpleDslPersistenceExtension {
     }
 
     void jpa() {
-        project.pluginManager.apply('simpledsl.feature.jpa')
+        project.pluginManager.apply('io.github.qigao.simpledsl.feature.jpa')
     }
 
     void jdbc() {
-        project.pluginManager.apply('simpledsl.feature.jdbc')
+        project.pluginManager.apply('io.github.qigao.simpledsl.feature.jdbc')
     }
 
     void jooq() {
-        project.pluginManager.apply('simpledsl.feature.jooq')
+        project.pluginManager.apply('io.github.qigao.simpledsl.feature.jooq')
     }
 }
