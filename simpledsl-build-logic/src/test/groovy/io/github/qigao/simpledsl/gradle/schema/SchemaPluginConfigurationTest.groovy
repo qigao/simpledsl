@@ -12,6 +12,7 @@ class SchemaPluginConfigurationTest {
     @Test
     void jooqSchemaExposesDefaultsAndBinaryMarker() {
         def project = ProjectBuilder.builder().build()
+        project.pluginManager.apply('java')
         project.extensions.add(
                 DependencyCatalogSnapshot,
                 'simpledslDependencyCatalog',
@@ -45,6 +46,7 @@ class SchemaPluginConfigurationTest {
     @Test
     void jsonSchemaExposesDefaultsAndBinaryMarker() {
         def project = ProjectBuilder.builder().build()
+        project.pluginManager.apply('java')
 
         project.pluginManager.apply('io.github.qigao.simpledsl.schema.json')
 
