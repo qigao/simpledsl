@@ -72,8 +72,8 @@ class PublishedConsumerContractTest {
     private List<String> consumerArguments(String... tasks) {
         List<String> arguments = new ArrayList<>(Arrays.asList(tasks))
         arguments.add('--configuration-cache')
-        arguments.add("-PsimpledslTestRepo=${requiredProperty('simpledsl.test.repo')}")
-        arguments.add("-PsimpledslVersion=${requiredProperty('simpledsl.test.version')}")
+        arguments.add("-PsimpledslTestRepo=${requiredProperty('simpledsl.test.repo')}".toString())
+        arguments.add("-PsimpledslVersion=${requiredProperty('simpledsl.test.version')}".toString())
         arguments.add('--stacktrace')
         arguments
     }
