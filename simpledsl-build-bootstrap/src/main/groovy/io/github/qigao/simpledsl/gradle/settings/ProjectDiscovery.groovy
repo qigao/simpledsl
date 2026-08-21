@@ -32,7 +32,7 @@ final class ProjectDiscovery {
 
         TomlTable discovery = parsed?.getTable('discovery')
         String mode = 'auto'
-        List<String> roots = ['core']
+        List<String> roots = ['.']
         List<String> excludes = []
         if (discovery != null) {
             rejectUnknown(discovery.keySet(), DISCOVERY_KEYS, 'discovery')
@@ -125,7 +125,7 @@ final class ProjectDiscovery {
         }
 
         String buildFile = preferredBuildFile(directory)
-        if (buildFile != null && !descendantContainsBuild) {
+        if (buildFile != null && !descendantContainsBuild && directory.canonicalFile != repositoryRoot.canonicalFile) {
             String name = deriveName(repositoryRoot, scanRoot, directory, strict)
             File canonical = directory.canonicalFile
             if (!selected.containsKey(canonical)) {
