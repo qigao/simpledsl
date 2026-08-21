@@ -2,6 +2,7 @@ import org.gradle.api.tasks.WriteProperties
 
 plugins {
     groovy
+    `maven-publish`
     alias(libs.plugins.plugin.publish)
 }
 
@@ -63,6 +64,15 @@ gradlePlugin {
             displayName = "SimpleDSL Settings"
             description = "SimpleDSL dependency manifest and module discovery settings plugin"
             tags = listOf("gradle", "build-platform", "module-discovery")
+        }
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "testPlugin"
+            url = rootProject.layout.buildDirectory.dir("test-plugin-repo").get().asFile.toURI()
         }
     }
 }
