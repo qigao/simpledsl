@@ -30,7 +30,7 @@ jobs:
       - name: Clean workspace
         run: gradle clean --stacktrace
 
-      - name: Verify build and published consumer contract
+      - name: Verify plugin build
         shell: bash
         run: |
           set -euo pipefail
@@ -38,6 +38,13 @@ jobs:
             verifyProductNamespace \
             :simpledsl-build-bootstrap:check \
             :simpledsl-build-logic:check \
+            --stacktrace
+
+      - name: Verify published consumer contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle \
             publishToTestPluginRepository \
             :integration-tests:test \
             --stacktrace
