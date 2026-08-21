@@ -50,5 +50,15 @@ jobs:
             find simpledsl-build-bootstrap/build/test-results/test -name 'TEST-*.xml' -print -exec cat {} \; || true
             exit "$status"
           fi
+      - name: Verify build logic contract
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew :simpledsl-build-logic:test --stacktrace || status=$?
+          if [[ ${status:-0} -ne 0 ]]; then
+            echo '=== build logic test XML ==='
+            find simpledsl-build-logic/build/test-results/test -name 'TEST-*.xml' -print -exec cat {} \; || true
+            exit "$status"
+          fi
       - name: Verify wrapper
         run: ./gradlew --version
