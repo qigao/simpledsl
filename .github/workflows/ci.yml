@@ -27,11 +27,14 @@ jobs:
         with:
           gradle-version: '9.1.0'
 
+      - name: Clean workspace
+        run: gradle clean --stacktrace
+
       - name: Verify build and published consumer contract
         shell: bash
         run: |
           set -euo pipefail
-          gradle clean \
+          gradle \
             verifyProductNamespace \
             :simpledsl-build-bootstrap:check \
             :simpledsl-build-logic:check \
