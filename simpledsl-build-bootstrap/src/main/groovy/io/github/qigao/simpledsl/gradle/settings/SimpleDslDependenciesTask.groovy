@@ -15,8 +15,7 @@ abstract class SimpleDslDependenciesTask extends DefaultTask {
     @TaskAction
     void report() {
         println 'SimpleDSL Dependencies'
-        println 'Java'
-        println "  ${javaVersion.get()}"
+        println "Java: ${javaVersion.get()}"
         println 'Platforms'
         platformLines.get().each { println "  ${it}" }
         println 'Plugins'
