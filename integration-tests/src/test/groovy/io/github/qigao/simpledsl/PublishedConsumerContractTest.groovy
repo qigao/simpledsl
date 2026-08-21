@@ -35,7 +35,8 @@ class PublishedConsumerContractTest {
         assertTrue(first.output.contains(':app | app | auto | build.gradle'))
         assertTrue(first.output.contains('Type: SPRING_SERVICE'))
         assertTrue(first.output.contains('Features: web'))
-        assertTrue(first.output.contains('SimpleDSL doctor: OK'))
+        assertTrue(first.output.contains('SimpleDSL Doctor — :app'))
+        assertTrue(first.output.contains('Configuration: OK'))
         assertTrue(first.output.contains('Configuration cache entry stored.'))
 
         def second = GradleRunner.create()
