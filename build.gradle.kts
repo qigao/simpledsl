@@ -14,6 +14,13 @@ tasks.register<Exec>("verifyProductNamespace") {
     commandLine("bash", "scripts/verify-product-namespace.sh")
 }
 
+tasks.register("publishToTestPluginRepository") {
+    dependsOn(
+        ":simpledsl-build-bootstrap:publishAllPublicationsToTestPluginRepository",
+        ":simpledsl-build-logic:publishAllPublicationsToTestPluginRepository"
+    )
+}
+
 tasks.named("check") {
     dependsOn("verifyProductNamespace")
 }
