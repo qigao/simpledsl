@@ -1,12 +1,14 @@
 package io.github.qigao.simpledsl.gradle
 
+import io.github.qigao.simpledsl.gradle.capability.BuiltinCapabilities
 import io.github.qigao.simpledsl.gradle.capability.CapabilityEngine
-import io.github.qigao.simpledsl.gradle.capability.CapabilityPluginRegistry
 import io.github.qigao.simpledsl.gradle.dependency.DependencyBridge
 import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
+import io.github.qigao.simpledsl.gradle.module.SimpleDslJavaLibraryPlugin
+import io.github.qigao.simpledsl.gradle.module.SimpleDslSpringLibraryPlugin
+import io.github.qigao.simpledsl.gradle.module.SimpleDslSpringServicePlugin
 import org.gradle.api.Action
 import org.gradle.api.Project
-import org.gradle.api.plugins.UnknownPluginException
 
 class SimpleDslExtension {
     private final Project project
@@ -27,28 +29,20 @@ class SimpleDslExtension {
         DependencyBridge.add(project, model, configuration, alias)
     }
 
-    void capability(String pluginId) {
-        try {
-            project.pluginManager.apply(pluginId)
-        } catch (UnknownPluginException e) {
-            throw new SimpleDslConfigurationException(
-                    'SimpleDSL configuration error\n' +
-                    "Project: ${project.path}\n" +
-                    "Gradle plugin id: ${pluginId}\n" +
-                    'Problem: capability plugin could not be resolved',
-                    e)
-        }
-
-        CapabilityPluginRegistry pluginRegistry = project.extensions.getByType(CapabilityPluginRegistry)
-        String capabilityId = pluginRegistry.capabilityForPlugin(pluginId)
-        if (capabilityId == null) {
-            throw new SimpleDslConfigurationException(
-                    'SimpleDSL configuration error\n' +
-                    "Project: ${project.path}\n" +
-                    "Gradle plugin id: ${pluginId}\n" +
-                    'Problem: plugin did not register a SimpleDSL primary capability')
-        }
+    void capability(String capabilityId) {
         project.extensions.getByType(CapabilityEngine).enable(capabilityId)
+    }
+
+    void javaLibrary() {
+        project.pluginManager.apply(SimpleDslJavaLibraryPlugin)
+    }
+
+    void springLibrary() {
+        project.pluginManager.apply(SimpleDslSpringLibraryPlugin)
+    }
+
+    void springService() {
+        project.pluginManager.apply(SimpleDslSpringServicePlugin)
     }
 
     SimpleDslPersistenceExtension getPersistence() {
@@ -66,34 +60,34 @@ class SimpleDslExtension {
     }
 
     void aop() {
-        project.pluginManager.apply('io.github.qigao.simpledsl.feature.aop')
+        capability(BuiltinCapabilities.AOP.id)
     }
 
     void transaction() {
-        project.pluginManager.apply('io.github.qigao.simpledsl.feature.transaction')
+        capability(BuiltinCapabilities.TRANSACTION.id)
     }
 
     void web() {
-        project.pluginManager.apply('io.github.qigao.simpledsl.feature.web')
+        capability(BuiltinCapabilities.WEB.id)
     }
 
     void httpClient() {
-        project.pluginManager.apply('io.github.qigao.simpledsl.feature.http-client')
+        capability(BuiltinCapabilities.HTTP_CLIENT.id)
     }
 
     void messaging() {
-        project.pluginManager.apply('io.github.qigao.simpledsl.feature.messaging')
+        capability(BuiltinCapabilities.MESSAGING.id)
     }
 
     void redis() {
-        project.pluginManager.apply('io.github.qigao.simpledsl.feature.redis')
+        capability(BuiltinCapabilities.REDIS.id)
     }
 
     void nativeImage() {
-        project.pluginManager.apply('io.github.qigao.simpledsl.feature.native')
+        capability(BuiltinCapabilities.NATIVE.id)
     }
 
     void lombok() {
-        project.pluginManager.apply('io.github.qigao.simpledsl.feature.lombok')
+        capability(BuiltinCapabilities.LOMBOK.id)
     }
 }
