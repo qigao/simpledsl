@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.WriteProperties
+
 plugins {
     groovy
     alias(libs.plugins.plugin.publish)
@@ -29,19 +31,26 @@ val springBootPluginVersion = libs.versions.spring.boot.get()
 val graalvmNativePluginVersion = libs.versions.graalvm.native.get()
 val jooqPluginVersion = libs.versions.jooq.get()
 val jsonschema2pojoPluginVersion = libs.versions.jsonschema2pojo.get()
-val distributionMetadata = mapOf(
-    "version" to distributionVersion,
-    "springBootPluginVersion" to springBootPluginVersion,
-    "graalvmNativePluginVersion" to graalvmNativePluginVersion,
-    "jooqPluginVersion" to jooqPluginVersion,
-    "jsonschema2pojoPluginVersion" to jsonschema2pojoPluginVersion,
-)
+
+val generateDistributionMetadata = tasks.register<WriteProperties>("generateDistributionMetadata") {
+    destinationFile.set(
+        layout.buildDirectory.file("generated-resources/simpledsl/META-INF/simpledsl/distribution.properties")
+    )
+    property("version", distributionVersion)
+    property("springBootPluginVersion", springBootPluginVersion)
+    property("graalvmNativePluginVersion", graalvmNativePluginVersion)
+    property("jooqPluginVersion", jooqPluginVersion)
+    property("jsonschema2pojoPluginVersion", jsonschema2pojoPluginVersion)
+}
+
+sourceSets {
+    named("main") {
+        resources.srcDir(layout.buildDirectory.dir("generated-resources/simpledsl"))
+    }
+}
 
 tasks.processResources {
-    distributionMetadata.forEach { (key, value) -> inputs.property(key, value) }
-    filesMatching("META-INF/simpledsl/distribution.properties") {
-        expand(distributionMetadata)
-    }
+    dependsOn(generateDistributionMetadata)
 }
 
 gradlePlugin {
