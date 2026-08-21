@@ -1,3 +1,5 @@
+import org.gradle.plugin.compatibility.compatibility
+
 plugins {
     groovy
     `maven-publish`
@@ -29,6 +31,12 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
+
+val configurationCacheVerifiedPluginIds = setOf(
+    "io.github.qigao.simpledsl.module",
+    "io.github.qigao.simpledsl.spring-service",
+    "io.github.qigao.simpledsl.feature.web"
+)
 
 gradlePlugin {
     website = "https://github.com/qigao/simpledsl"
@@ -152,6 +160,13 @@ gradlePlugin {
             displayName = "SimpleDSL JSON Schema"
             description = "Generate Java sources from JSON Schema with SimpleDSL conventions"
             tags = listOf("gradle", "json-schema", "codegen", "schema")
+        }
+        configureEach {
+            compatibility {
+                features {
+                    configurationCache = id in configurationCacheVerifiedPluginIds
+                }
+            }
         }
     }
 }
