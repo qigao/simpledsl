@@ -71,7 +71,7 @@ gradlePlugin {
             implementationClass = "io.github.qigao.simpledsl.gradle.settings.SimpleDslSettingsPlugin"
             displayName = "SimpleDSL Settings"
             description = "SimpleDSL dependency manifest and module discovery settings plugin"
-            tags = listOf("gradle", "build-platform", "module-discovery")
+            tags = listOf("build-platform", "module-discovery")
             compatibility {
                 features {
                     configurationCache = true
