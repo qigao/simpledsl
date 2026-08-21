@@ -15,6 +15,13 @@ class SimpleDslSettingsPlugin implements Plugin<Settings> {
         extension.modulesManifest.convention(extension.repositoryRoot.file('gradle/simpledsl/modules.toml'))
         extension.moduleDiscovery.convention(true)
 
+        def discoverySnapshotProvider = settings.providers.of(ProjectDiscoveryValueSource) { spec ->
+            spec.parameters.repositoryRootPath.set(
+                    extension.repositoryRoot.map { directory -> directory.asFile.absolutePath })
+            spec.parameters.modulesManifestPath.set(
+                    extension.modulesManifest.map { file -> file.asFile.absolutePath })
+        }
+
         def serviceHolder = [provider: null]
         settings.pluginManagement.resolutionStrategy.eachPlugin { details ->
             String pluginId = details.requested.id.id
@@ -68,16 +75,15 @@ class SimpleDslSettingsPlugin implements Plugin<Settings> {
             Map<String, Object> snapshot = serviceProvider.get().snapshot()
             validateOwnedPluginDeclarations(snapshot)
 
-            ProjectRegistry projectRegistry = null
+            List<Map<String, String>> discoveredProjects = []
             if (extension.moduleDiscovery.get()) {
-                projectRegistry = ProjectDiscovery.discover(
-                        extension.repositoryRoot.get().asFile,
-                        extension.modulesManifest.get().asFile)
-                projectRegistry.projects().each { projectSpec ->
-                    settings.include(projectSpec.gradlePath)
-                    def descriptor = settings.project(projectSpec.gradlePath)
-                    descriptor.projectDir = projectSpec.directory
-                    descriptor.buildFileName = projectSpec.buildFile
+                discoveredProjects = discoverySnapshotProvider.get()
+                File repositoryRoot = extension.repositoryRoot.get().asFile.absoluteFile
+                discoveredProjects.each { entry ->
+                    settings.include(entry.gradlePath)
+                    def descriptor = settings.project(entry.gradlePath)
+                    descriptor.projectDir = new File(repositoryRoot, entry.relativeDirectory)
+                    descriptor.buildFileName = entry.buildFile
                 }
             }
 
@@ -95,12 +101,8 @@ class SimpleDslSettingsPlugin implements Plugin<Settings> {
                 entry.platform ? "${alias} -> ${notation} [platform=${entry.platform}]" : "${alias} -> ${notation}"
             }
 
-            File repositoryRoot = extension.repositoryRoot.get().asFile.canonicalFile
-            List<String> projectLines = projectRegistry == null ? [] : projectRegistry.projects().collect { projectSpec ->
-                String relative = repositoryRoot.toPath()
-                        .relativize(projectSpec.directory.toPath()).toString()
-                        .replace('\\', '/')
-                "${projectSpec.gradlePath} | ${relative} | ${projectSpec.source} | ${projectSpec.buildFile}"
+            List<String> projectLines = discoveredProjects.collect { entry ->
+                "${entry.gradlePath} | ${entry.relativeDirectory} | ${entry.source} | ${entry.buildFile}"
             }.sort()
 
             settings.gradle.rootProject { root ->
