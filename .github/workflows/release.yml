@@ -4,6 +4,21 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without the v prefix
+        required: true
+        type: string
+      target:
+        description: Publication component for manual recovery
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - build-logic
+          - bootstrap
 
 permissions:
   contents: read
@@ -13,8 +28,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  publish:
+  verify:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      target: ${{ steps.release.outputs.target }}
     steps:
       - uses: actions/checkout@v4
 
@@ -27,17 +45,34 @@ jobs:
         with:
           gradle-version: '9.1.0'
 
-      - name: Resolve release version
+      - name: Resolve release
+        id: release
         shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_TARGET: ${{ inputs.target }}
         run: |
           set -euo pipefail
-          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            TARGET="all"
+          else
+            VERSION="$INPUT_VERSION"
+            TARGET="$INPUT_TARGET"
+          fi
           test -n "$VERSION"
           if [[ "$VERSION" == *SNAPSHOT* ]]; then
             echo 'Plugin Portal releases must not use SNAPSHOT versions.' >&2
             exit 1
           fi
+          case "$TARGET" in
+            all|build-logic|bootstrap) ;;
+            *) echo "Unsupported release target: $TARGET" >&2; exit 1 ;;
+          esac
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "target=$TARGET" >> "$GITHUB_OUTPUT"
           echo "SIMPLEDSL_RELEASE_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "SIMPLEDSL_RELEASE_TARGET=$TARGET" >> "$GITHUB_ENV"
 
       - name: Clean workspace
         run: gradle clean --stacktrace
@@ -63,7 +98,7 @@ jobs:
             -PreleaseVersion="$SIMPLEDSL_RELEASE_VERSION" \
             --stacktrace
 
-      - name: Validate Plugin Portal publications
+      - name: Validate Plugin Portal publication
         shell: bash
         env:
           GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
@@ -72,24 +107,92 @@ jobs:
           set -euo pipefail
           test -n "$GRADLE_PUBLISH_KEY"
           test -n "$GRADLE_PUBLISH_SECRET"
+          case "$SIMPLEDSL_RELEASE_TARGET" in
+            all)
+              TASKS=(
+                :simpledsl-build-logic:publishPlugins
+                :simpledsl-build-bootstrap:publishPlugins
+              )
+              ;;
+            build-logic)
+              TASKS=(:simpledsl-build-logic:publishPlugins)
+              ;;
+            bootstrap)
+              TASKS=(:simpledsl-build-bootstrap:publishPlugins)
+              ;;
+          esac
           gradle \
-            :simpledsl-build-bootstrap:publishPlugins \
-            :simpledsl-build-logic:publishPlugins \
+            "${TASKS[@]}" \
             -PreleaseVersion="$SIMPLEDSL_RELEASE_VERSION" \
             --validate-only \
             --stacktrace
 
-      - name: Publish to Gradle Plugin Portal
+  publish-build-logic:
+    needs: verify
+    if: needs.verify.outputs.target == 'all' || needs.verify.outputs.target == 'build-logic'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.1.0'
+
+      - name: Publish build logic to Gradle Plugin Portal
         shell: bash
         env:
           GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
           GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
+          SIMPLEDSL_RELEASE_VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          set -euo pipefail
+          test -n "$GRADLE_PUBLISH_KEY"
+          test -n "$GRADLE_PUBLISH_SECRET"
+          gradle \
+            :simpledsl-build-logic:publishPlugins \
+            -PreleaseVersion="$SIMPLEDSL_RELEASE_VERSION" \
+            --stacktrace
+
+  publish-bootstrap:
+    needs:
+      - verify
+      - publish-build-logic
+    if: >-
+      always() &&
+      needs.verify.result == 'success' &&
+      (
+        needs.verify.outputs.target == 'bootstrap' ||
+        (needs.verify.outputs.target == 'all' && needs.publish-build-logic.result == 'success')
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.1.0'
+
+      - name: Publish settings bootstrap to Gradle Plugin Portal
+        shell: bash
+        env:
+          GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
+          GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
+          SIMPLEDSL_RELEASE_VERSION: ${{ needs.verify.outputs.version }}
         run: |
           set -euo pipefail
           test -n "$GRADLE_PUBLISH_KEY"
           test -n "$GRADLE_PUBLISH_SECRET"
           gradle \
             :simpledsl-build-bootstrap:publishPlugins \
-            :simpledsl-build-logic:publishPlugins \
             -PreleaseVersion="$SIMPLEDSL_RELEASE_VERSION" \
             --stacktrace
