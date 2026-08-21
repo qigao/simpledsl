@@ -1,5 +1,6 @@
 import org.gradle.api.tasks.WriteProperties
 import org.gradle.api.tasks.bundling.Jar
+import org.gradle.plugin.compatibility.compatibility
 
 plugins {
     groovy
@@ -71,6 +72,11 @@ gradlePlugin {
             displayName = "SimpleDSL Settings"
             description = "SimpleDSL dependency manifest and module discovery settings plugin"
             tags = listOf("gradle", "build-platform", "module-discovery")
+            compatibility {
+                features {
+                    configurationCache = true
+                }
+            }
         }
     }
 }
