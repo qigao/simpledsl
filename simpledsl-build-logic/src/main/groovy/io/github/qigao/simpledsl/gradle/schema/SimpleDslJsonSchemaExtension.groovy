@@ -1,6 +1,6 @@
 package io.github.qigao.simpledsl.gradle.schema
 
-final class SimpleDslJsonSchemaExtension {
+class SimpleDslJsonSchemaExtension {
     String source = 'json'
     String packageName
     boolean validation = true
