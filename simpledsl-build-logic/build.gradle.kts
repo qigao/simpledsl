@@ -145,5 +145,19 @@ gradlePlugin {
             description = "Enable Lombok compile-time dependencies for a SimpleDSL module"
             tags = listOf("gradle", "java", "lombok")
         }
+        create("simpleDslSchemaJooq") {
+            id = "io.github.qigao.simpledsl.schema.jooq"
+            implementationClass = "io.github.qigao.simpledsl.gradle.schema.SimpleDslJooqSchemaPlugin"
+            displayName = "SimpleDSL jOOQ Schema"
+            description = "Generate jOOQ sources from DDL with SimpleDSL conventions"
+            tags = listOf("gradle", "jooq", "codegen", "schema")
+        }
+        create("simpleDslSchemaJson") {
+            id = "io.github.qigao.simpledsl.schema.json"
+            implementationClass = "io.github.qigao.simpledsl.gradle.schema.SimpleDslJsonSchemaPlugin"
+            displayName = "SimpleDSL JSON Schema"
+            description = "Generate Java sources from JSON Schema with SimpleDSL conventions"
+            tags = listOf("gradle", "json-schema", "codegen", "schema")
+        }
     }
 }
