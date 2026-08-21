@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - design/durex-gradle-plugin-distribution
   pull_request:
     branches:
       - master
