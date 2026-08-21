@@ -46,7 +46,8 @@ class PublishedConsumerContractTest {
 
         assertTrue(
                 second.output.contains('Reusing configuration cache.') ||
-                second.output.contains('Configuration cache entry reused.'))
+                second.output.contains('Configuration cache entry reused.'),
+                "Second build did not reuse configuration cache:\n${second.output}".toString())
     }
 
     @Test
