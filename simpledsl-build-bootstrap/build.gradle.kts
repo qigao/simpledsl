@@ -24,27 +24,23 @@ tasks.test {
     useJUnitPlatform()
 }
 
+val distributionVersion = version.toString()
 val springBootPluginVersion = libs.versions.spring.boot.get()
 val graalvmNativePluginVersion = libs.versions.graalvm.native.get()
 val jooqPluginVersion = libs.versions.jooq.get()
 val jsonschema2pojoPluginVersion = libs.versions.jsonschema2pojo.get()
+val distributionMetadata = mapOf(
+    "version" to distributionVersion,
+    "springBootPluginVersion" to springBootPluginVersion,
+    "graalvmNativePluginVersion" to graalvmNativePluginVersion,
+    "jooqPluginVersion" to jooqPluginVersion,
+    "jsonschema2pojoPluginVersion" to jsonschema2pojoPluginVersion,
+)
 
 tasks.processResources {
-    inputs.property("simpledslVersion", project.version.toString())
-    inputs.property("springBootPluginVersion", springBootPluginVersion)
-    inputs.property("graalvmNativePluginVersion", graalvmNativePluginVersion)
-    inputs.property("jooqPluginVersion", jooqPluginVersion)
-    inputs.property("jsonschema2pojoPluginVersion", jsonschema2pojoPluginVersion)
+    distributionMetadata.forEach { (key, value) -> inputs.property(key, value) }
     filesMatching("META-INF/simpledsl/distribution.properties") {
-        expand(
-            mapOf(
-                "version" to project.version.toString(),
-                "springBootPluginVersion" to springBootPluginVersion,
-                "graalvmNativePluginVersion" to graalvmNativePluginVersion,
-                "jooqPluginVersion" to jooqPluginVersion,
-                "jsonschema2pojoPluginVersion" to jsonschema2pojoPluginVersion,
-            )
-        )
+        expand(distributionMetadata)
     }
 }
 
