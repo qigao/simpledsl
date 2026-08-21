@@ -17,4 +17,8 @@ tasks.test {
         rootProject.layout.buildDirectory.dir("test-plugin-repo").get().asFile.absolutePath
     )
     systemProperty("simpledsl.test.version", rootProject.version.toString())
+    systemProperty(
+        "simpledsl.fixture.dir",
+        layout.projectDirectory.dir("consumer").asFile.absolutePath
+    )
 }
