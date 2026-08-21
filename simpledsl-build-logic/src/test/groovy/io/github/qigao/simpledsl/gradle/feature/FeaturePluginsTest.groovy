@@ -1,6 +1,7 @@
 package io.github.qigao.simpledsl.gradle.feature
 
 import io.github.qigao.simpledsl.gradle.SimpleDslConfigurationException
+import io.github.qigao.simpledsl.gradle.SimpleDslExtension
 import io.github.qigao.simpledsl.gradle.capability.BuiltinCapabilities
 import io.github.qigao.simpledsl.gradle.catalog.CatalogLibrary
 import io.github.qigao.simpledsl.gradle.catalog.CatalogPlatform
@@ -35,6 +36,30 @@ class FeaturePluginsTest {
     }
 
     @Test
+    void convenienceDslResolvesPublicFeaturePluginIds() {
+        def project = projectWithCatalog()
+        project.pluginManager.apply('io.github.qigao.simpledsl.spring-service')
+        def simpledsl = project.extensions.getByType(SimpleDslExtension)
+
+        simpledsl.aop()
+        simpledsl.transaction()
+        simpledsl.web()
+        simpledsl.httpClient()
+        simpledsl.messaging()
+        simpledsl.redis()
+        simpledsl.lombok()
+        simpledsl.persistence.jpa()
+        simpledsl.persistence.jdbc()
+        simpledsl.persistence.jooq()
+
+        def capabilities = project.extensions.getByType(SimpleDslModuleModel).capabilities.get()
+        assertTrue(capabilities.containsAll([
+                'aop', 'transaction', 'web', 'http-client', 'messaging',
+                'redis', 'lombok', 'jpa', 'jdbc', 'jooq'
+        ]))
+    }
+
+    @Test
     void nativeFeatureRejectsJavaLibrary() {
         def project = projectWithCatalog()
         project.pluginManager.apply('io.github.qigao.simpledsl.java-library')
@@ -60,9 +85,19 @@ class FeaturePluginsTest {
                     'junit-platform-launcher': new CatalogLibrary('junit-platform-launcher', 'org.junit.platform:junit-platform-launcher', '1.13.4', null),
                     'spring-core': spring('spring-core', 'org.springframework.boot:spring-boot-starter'),
                     'spring-test': spring('spring-test', 'org.springframework.boot:spring-boot-starter-test'),
+                    'spring-aop': spring('spring-aop', 'org.springframework.boot:spring-boot-starter-aop'),
+                    'spring-transaction': spring('spring-transaction', 'org.springframework:spring-tx'),
                     'spring-webmvc': spring('spring-webmvc', 'org.springframework.boot:spring-boot-starter-webmvc'),
                     'spring-validation': spring('spring-validation', 'org.springframework.boot:spring-boot-starter-validation'),
-                    'spring-webmvc-test': spring('spring-webmvc-test', 'org.springframework.boot:spring-boot-starter-webmvc-test')
+                    'spring-webmvc-test': spring('spring-webmvc-test', 'org.springframework.boot:spring-boot-starter-test'),
+                    'spring-restclient': spring('spring-restclient', 'org.springframework.boot:spring-boot-starter-restclient'),
+                    'spring-restclient-test': spring('spring-restclient-test', 'org.springframework.boot:spring-boot-starter-test'),
+                    'spring-messaging': spring('spring-messaging', 'org.springframework:spring-messaging'),
+                    'spring-redis': spring('spring-redis', 'org.springframework.boot:spring-boot-starter-data-redis'),
+                    'spring-jpa': spring('spring-jpa', 'org.springframework.boot:spring-boot-starter-data-jpa'),
+                    'spring-jdbc': spring('spring-jdbc', 'org.springframework.boot:spring-boot-starter-jdbc'),
+                    'spring-jooq': spring('spring-jooq', 'org.springframework.boot:spring-boot-starter-jooq'),
+                    'lombok': new CatalogLibrary('lombok', 'org.projectlombok:lombok', '1.18.42', null)
                 ],
                 [:])
         project.extensions.add(DependencyCatalogSnapshot, 'simpledslDependencyCatalog', catalog)
