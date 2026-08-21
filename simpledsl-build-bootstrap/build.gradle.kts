@@ -54,6 +54,10 @@ tasks.processResources {
     dependsOn(generateDistributionMetadata)
 }
 
+tasks.named("sourcesJar") {
+    dependsOn(generateDistributionMetadata)
+}
+
 gradlePlugin {
     website = "https://github.com/qigao/simpledsl"
     vcsUrl = "https://github.com/qigao/simpledsl.git"
