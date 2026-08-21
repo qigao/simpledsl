@@ -17,6 +17,7 @@ dependencies {
     implementation(libs.tomlj)
     testImplementation(gradleTestKit())
     testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 tasks.test {
