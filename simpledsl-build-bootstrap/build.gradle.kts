@@ -1,4 +1,5 @@
 import org.gradle.api.tasks.WriteProperties
+import org.gradle.api.tasks.bundling.Jar
 
 plugins {
     groovy
@@ -54,8 +55,10 @@ tasks.processResources {
     dependsOn(generateDistributionMetadata)
 }
 
-tasks.named("sourcesJar") {
-    dependsOn(generateDistributionMetadata)
+tasks.withType<Jar>().configureEach {
+    if (name == "sourcesJar") {
+        dependsOn(generateDistributionMetadata)
+    }
 }
 
 gradlePlugin {
