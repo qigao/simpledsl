@@ -74,6 +74,18 @@ jobs:
             find simpledsl-build-logic/build/test-results/test -name 'TEST-*.xml' -print -exec cat {} \; || true
             exit "$status"
           fi
+      - name: Verify plugin metadata
+        run: gradle :simpledsl-build-bootstrap:validatePlugins :simpledsl-build-logic:validatePlugins --stacktrace
+      - name: Verify published consumer contract
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle :integration-tests:test --stacktrace || status=$?
+          if [[ ${status:-0} -ne 0 ]]; then
+            echo '=== integration test XML ==='
+            find integration-tests/build/test-results/test -name 'TEST-*.xml' -print -exec cat {} \; || true
+            exit "$status"
+          fi
       - name: Verify wrapper metadata
         shell: bash
         run: |
