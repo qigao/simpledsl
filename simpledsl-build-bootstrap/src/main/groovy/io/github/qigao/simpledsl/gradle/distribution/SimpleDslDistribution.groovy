@@ -6,6 +6,7 @@ final class SimpleDslDistribution {
     static final String PUBLIC_PREFIX = 'io.github.qigao.simpledsl.'
     static final String SETTINGS_PLUGIN_ID = 'io.github.qigao.simpledsl.settings'
 
+    // Public release metadata is resolved from generated distribution.properties.
     static final Map<String, String> OWNED_PLUGIN_MODULES = Collections.unmodifiableMap([
             'org.springframework.boot'         : 'org.springframework.boot:spring-boot-gradle-plugin',
             'org.graalvm.buildtools.native'   : 'org.graalvm.buildtools:native-gradle-plugin',
