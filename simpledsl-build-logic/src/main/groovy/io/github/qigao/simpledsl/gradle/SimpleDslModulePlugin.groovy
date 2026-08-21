@@ -15,7 +15,7 @@ import org.gradle.api.Project
 class SimpleDslModulePlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
-        project.pluginManager.apply('simpledsl.internal.catalog')
+        project.pluginManager.apply('io.github.qigao.simpledsl.internal.catalog')
 
         DependencyCatalogSnapshot catalog = project.extensions.getByType(DependencyCatalogSnapshot)
         SimpleDslModuleModel model = project.extensions.create('simpledslModuleModel', SimpleDslModuleModel)
