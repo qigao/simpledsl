@@ -41,13 +41,6 @@ gradlePlugin {
             description = "SimpleDSL module model, dependency catalog, capabilities, and diagnostics"
             tags = listOf("gradle", "build-platform", "modules")
         }
-        create("simpleDslInternalCatalog") {
-            id = "io.github.qigao.simpledsl.internal.catalog"
-            implementationClass = "io.github.qigao.simpledsl.gradle.catalog.SimpleDslCatalogPlugin"
-            displayName = "SimpleDSL Internal Catalog"
-            description = "Internal SimpleDSL dependency catalog bridge"
-            tags = listOf("gradle", "build-platform")
-        }
         create("simpleDslJavaLibrary") {
             id = "io.github.qigao.simpledsl.java-library"
             implementationClass = "io.github.qigao.simpledsl.gradle.module.SimpleDslJavaLibraryPlugin"
