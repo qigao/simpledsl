@@ -1,5 +1,7 @@
 package io.github.qigao.simpledsl.gradle
 
+import io.github.qigao.simpledsl.gradle.capability.BuiltinCapabilities
+import io.github.qigao.simpledsl.gradle.capability.CapabilityEngine
 import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
 import org.gradle.api.Project
 
@@ -13,14 +15,18 @@ class SimpleDslPersistenceExtension {
     }
 
     void jpa() {
-        project.pluginManager.apply('io.github.qigao.simpledsl.feature.jpa')
+        enable(BuiltinCapabilities.JPA.id)
     }
 
     void jdbc() {
-        project.pluginManager.apply('io.github.qigao.simpledsl.feature.jdbc')
+        enable(BuiltinCapabilities.JDBC.id)
     }
 
     void jooq() {
-        project.pluginManager.apply('io.github.qigao.simpledsl.feature.jooq')
+        enable(BuiltinCapabilities.JOOQ.id)
+    }
+
+    private void enable(String capabilityId) {
+        project.extensions.getByType(CapabilityEngine).enable(capabilityId)
     }
 }
