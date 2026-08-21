@@ -8,6 +8,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 
+import static org.junit.jupiter.api.Assertions.assertEquals
 import static org.junit.jupiter.api.Assertions.assertFalse
 import static org.junit.jupiter.api.Assertions.assertTrue
 
@@ -42,17 +43,27 @@ class PublishedConsumerContractTest {
         String version = requiredProperty('simpledsl.test.version')
 
         assertTrue(repository.isDirectory())
-        assertTrue(PUBLIC_PLUGIN_IDS.size() == 18)
+        assertEquals(18, PUBLIC_PLUGIN_IDS.size())
 
-        PUBLIC_PLUGIN_IDS.each { pluginId ->
-            File markerPom = markerPom(repository, pluginId, version)
-            assertTrue(markerPom.isFile(), "Missing marker POM for ${pluginId}: ${markerPom}".toString())
+        Set<String> actualPluginIds = new TreeSet<>()
+        repository.eachFileRecurse { File file ->
+            if (!file.isFile() || !file.name.endsWith('.pom')) return
+            if (file.parentFile?.name != version) return
+
+            File artifactDirectory = file.parentFile.parentFile
+            String artifactId = artifactDirectory?.name
+            if (artifactId?.endsWith('.gradle.plugin')) {
+                actualPluginIds.add(
+                        artifactId.substring(0, artifactId.length() - '.gradle.plugin'.length()))
+            }
         }
 
-        File internalMarkerRoot = new File(repository, 'io/github/qigao/simpledsl/internal')
-        assertFalse(
-                internalMarkerRoot.exists(),
-                "Internal SimpleDSL plugin markers must not be published: ${internalMarkerRoot}".toString())
+        Set<String> expectedPluginIds = new TreeSet<>(PUBLIC_PLUGIN_IDS)
+        assertEquals(
+                expectedPluginIds,
+                actualPluginIds,
+                "Unexpected published plugin marker surface. Expected ${expectedPluginIds}, actual ${actualPluginIds}".toString())
+        assertFalse(actualPluginIds.any { it.startsWith('io.github.qigao.simpledsl.internal.') })
     }
 
     @Test
@@ -108,14 +119,6 @@ class PublishedConsumerContractTest {
         assertTrue(result.output.contains('Plugin: io.github.qigao.simpledsl.spring-service'))
         assertTrue(result.output.contains('Requested: 9.9.9'))
         assertTrue(result.output.contains("Managed: ${managedVersion}"))
-    }
-
-    private static File markerPom(File repository, String pluginId, String version) {
-        String groupPath = pluginId.replace('.', '/')
-        String artifactId = "${pluginId}.gradle.plugin".toString()
-        new File(
-                repository,
-                "${groupPath}/${artifactId}/${version}/${artifactId}-${version}.pom".toString())
     }
 
     private List<String> consumerArguments(String... tasks) {
