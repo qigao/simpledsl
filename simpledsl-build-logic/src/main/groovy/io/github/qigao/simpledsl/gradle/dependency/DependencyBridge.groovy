@@ -50,7 +50,7 @@ final class DependencyBridge {
             throw new SimpleDslConfigurationException(
                     'SimpleDSL configuration error\n' +
                     "Project: ${project.path}\n" +
-                    'Problem: SimpleDSL dependency catalog is unavailable; apply simpledsl.module')
+                    'Problem: SimpleDSL dependency catalog is unavailable; apply io.github.qigao.simpledsl.module')
         }
         value
     }
