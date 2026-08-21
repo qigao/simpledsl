@@ -6,6 +6,7 @@ import io.github.qigao.simpledsl.gradle.catalog.CatalogLibrary
 import io.github.qigao.simpledsl.gradle.catalog.CatalogPlatform
 import io.github.qigao.simpledsl.gradle.catalog.DependencyCatalogSnapshot
 import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
+import org.gradle.api.GradleException
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Test
 
@@ -38,12 +39,14 @@ class FeaturePluginsTest {
         def project = projectWithCatalog()
         project.pluginManager.apply('io.github.qigao.simpledsl.java-library')
 
-        def error = assertThrows(SimpleDslConfigurationException) {
+        def error = assertThrows(GradleException) {
             project.pluginManager.apply('io.github.qigao.simpledsl.feature.native')
         }
 
-        assertTrue(error.message.contains('SimpleDSL configuration error'))
-        assertTrue(error.message.contains("capability 'native' is not supported"))
+        assertTrue(error.cause instanceof SimpleDslConfigurationException)
+        def cause = error.cause as SimpleDslConfigurationException
+        assertTrue(cause.message.contains('SimpleDSL configuration error'))
+        assertTrue(cause.message.contains("capability 'native' is not supported"))
     }
 
     private static def projectWithCatalog() {
