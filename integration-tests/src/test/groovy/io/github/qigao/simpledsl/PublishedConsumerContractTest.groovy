@@ -12,8 +12,48 @@ import static org.junit.jupiter.api.Assertions.assertFalse
 import static org.junit.jupiter.api.Assertions.assertTrue
 
 class PublishedConsumerContractTest {
+    private static final List<String> PUBLIC_PLUGIN_IDS = [
+            'io.github.qigao.simpledsl.settings',
+            'io.github.qigao.simpledsl.module',
+            'io.github.qigao.simpledsl.java-library',
+            'io.github.qigao.simpledsl.spring-library',
+            'io.github.qigao.simpledsl.spring-service',
+            'io.github.qigao.simpledsl.feature.aop',
+            'io.github.qigao.simpledsl.feature.transaction',
+            'io.github.qigao.simpledsl.feature.web',
+            'io.github.qigao.simpledsl.feature.http-client',
+            'io.github.qigao.simpledsl.feature.messaging',
+            'io.github.qigao.simpledsl.feature.jdbc',
+            'io.github.qigao.simpledsl.feature.jooq',
+            'io.github.qigao.simpledsl.feature.jpa',
+            'io.github.qigao.simpledsl.feature.redis',
+            'io.github.qigao.simpledsl.feature.native',
+            'io.github.qigao.simpledsl.feature.lombok',
+            'io.github.qigao.simpledsl.schema.jooq',
+            'io.github.qigao.simpledsl.schema.json'
+    ].asImmutable()
+
     @TempDir
     Path temporaryDirectory
+
+    @Test
+    void publishesExactlyThePublicPluginMarkerSurface() {
+        File repository = new File(requiredProperty('simpledsl.test.repo'))
+        String version = requiredProperty('simpledsl.test.version')
+
+        assertTrue(repository.isDirectory())
+        assertTrue(PUBLIC_PLUGIN_IDS.size() == 18)
+
+        PUBLIC_PLUGIN_IDS.each { pluginId ->
+            File markerPom = markerPom(repository, pluginId, version)
+            assertTrue(markerPom.isFile(), "Missing marker POM for ${pluginId}: ${markerPom}".toString())
+        }
+
+        File internalMarkerRoot = new File(repository, 'io/github/qigao/simpledsl/internal')
+        assertFalse(
+                internalMarkerRoot.exists(),
+                "Internal SimpleDSL plugin markers must not be published: ${internalMarkerRoot}".toString())
+    }
 
     @Test
     void resolvesPublishedArtifactsWithoutSourceBuildAndReusesConfigurationCache() {
@@ -68,6 +108,14 @@ class PublishedConsumerContractTest {
         assertTrue(result.output.contains('Plugin: io.github.qigao.simpledsl.spring-service'))
         assertTrue(result.output.contains('Requested: 9.9.9'))
         assertTrue(result.output.contains("Managed: ${managedVersion}"))
+    }
+
+    private static File markerPom(File repository, String pluginId, String version) {
+        String groupPath = pluginId.replace('.', '/')
+        String artifactId = "${pluginId}.gradle.plugin".toString()
+        new File(
+                repository,
+                "${groupPath}/${artifactId}/${version}/${artifactId}-${version}.pom".toString())
     }
 
     private List<String> consumerArguments(String... tasks) {
