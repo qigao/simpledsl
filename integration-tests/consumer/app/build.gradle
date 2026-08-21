@@ -1,0 +1,4 @@
+plugins {
+    id 'io.github.qigao.simpledsl.spring-service'
+    id 'io.github.qigao.simpledsl.feature.web'
+}
