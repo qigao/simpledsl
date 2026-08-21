@@ -1,0 +1,19 @@
+pluginManagement {
+    repositories {
+        maven { url = uri(providers.gradleProperty('simpledslTestRepo').get()) }
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+plugins {
+    id 'io.github.qigao.simpledsl.settings' version providers.gradleProperty('simpledslVersion').get()
+}
+
+rootProject.name = 'simpledsl-consumer'
+
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+    }
+}
