@@ -28,3 +28,12 @@ if ((${#existing[@]} > 0)); then
     exit 1
   fi
 fi
+
+plugin_builds=(
+  simpledsl-build-bootstrap/build.gradle.kts
+  simpledsl-build-logic/build.gradle.kts
+)
+if grep -nE 'tags[[:space:]]*=.*"(gradle|plugin)"' "${plugin_builds[@]}"; then
+  echo 'Gradle Plugin Portal reserved tag found; gradle and plugin are forbidden tags' >&2
+  exit 1
+fi
