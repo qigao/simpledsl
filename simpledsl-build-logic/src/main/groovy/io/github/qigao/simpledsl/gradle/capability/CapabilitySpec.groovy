@@ -12,7 +12,7 @@ final class CapabilitySpec {
     final Set<String> requires
     final Set<String> conflicts
     final List<DependencyBinding> dependencies
-    final Set<String> externalPluginAliases
+    final Set<String> externalPluginIds
 
     private CapabilitySpec(
             String id,
@@ -20,7 +20,7 @@ final class CapabilitySpec {
             Set<String> requires,
             Set<String> conflicts,
             List<DependencyBinding> dependencies,
-            Set<String> externalPluginAliases) {
+            Set<String> externalPluginIds) {
         this.id = id
         this.allowedModules = Collections.unmodifiableSet(new LinkedHashSet<>(allowedModules))
         this.requires = Collections.unmodifiableSet(new TreeSet<>(requires))
@@ -28,7 +28,7 @@ final class CapabilitySpec {
         List<DependencyBinding> sortedDependencies = new ArrayList<>(dependencies)
         Collections.sort(sortedDependencies)
         this.dependencies = Collections.unmodifiableList(sortedDependencies)
-        this.externalPluginAliases = Collections.unmodifiableSet(new TreeSet<>(externalPluginAliases))
+        this.externalPluginIds = Collections.unmodifiableSet(new TreeSet<>(externalPluginIds))
     }
 
     static Builder builder(String id) {
@@ -41,7 +41,7 @@ final class CapabilitySpec {
         private final Set<String> requires = new LinkedHashSet<>()
         private final Set<String> conflicts = new LinkedHashSet<>()
         private final List<DependencyBinding> dependencies = []
-        private final Set<String> externalPluginAliases = new LinkedHashSet<>()
+        private final Set<String> externalPluginIds = new LinkedHashSet<>()
 
         Builder(String id) {
             if (id == null || id.trim().isEmpty()) {
@@ -70,13 +70,13 @@ final class CapabilitySpec {
             this
         }
 
-        Builder externalPlugin(String pluginAlias) {
-            externalPluginAliases.add(pluginAlias)
+        Builder externalPluginId(String pluginId) {
+            externalPluginIds.add(pluginId)
             this
         }
 
         CapabilitySpec build() {
-            new CapabilitySpec(id, allowedModules, requires, conflicts, dependencies, externalPluginAliases)
+            new CapabilitySpec(id, allowedModules, requires, conflicts, dependencies, externalPluginIds)
         }
     }
 }

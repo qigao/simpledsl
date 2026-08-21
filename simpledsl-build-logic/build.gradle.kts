@@ -68,5 +68,82 @@ gradlePlugin {
             description = "SimpleDSL Spring Boot service convention"
             tags = listOf("gradle", "spring", "spring-boot")
         }
+        create("simpleDslFeatureAop") {
+            id = "io.github.qigao.simpledsl.feature.aop"
+            implementationClass = "io.github.qigao.simpledsl.gradle.feature.SimpleDslAopPlugin"
+            displayName = "SimpleDSL AOP Feature"
+            description = "Enable Spring AOP dependencies for a SimpleDSL module"
+            tags = listOf("gradle", "spring", "aop")
+        }
+        create("simpleDslFeatureTransaction") {
+            id = "io.github.qigao.simpledsl.feature.transaction"
+            implementationClass = "io.github.qigao.simpledsl.gradle.feature.SimpleDslTransactionPlugin"
+            displayName = "SimpleDSL Transaction Feature"
+            description = "Enable Spring transaction dependencies for a SimpleDSL module"
+            tags = listOf("gradle", "spring", "transactions")
+        }
+        create("simpleDslFeatureWeb") {
+            id = "io.github.qigao.simpledsl.feature.web"
+            implementationClass = "io.github.qigao.simpledsl.gradle.feature.SimpleDslWebPlugin"
+            displayName = "SimpleDSL Web Feature"
+            description = "Enable Spring MVC dependencies for a SimpleDSL service"
+            tags = listOf("gradle", "spring", "web")
+        }
+        create("simpleDslFeatureHttpClient") {
+            id = "io.github.qigao.simpledsl.feature.http-client"
+            implementationClass = "io.github.qigao.simpledsl.gradle.feature.SimpleDslHttpClientPlugin"
+            displayName = "SimpleDSL HTTP Client Feature"
+            description = "Enable Spring HTTP client dependencies for a SimpleDSL module"
+            tags = listOf("gradle", "spring", "http")
+        }
+        create("simpleDslFeatureMessaging") {
+            id = "io.github.qigao.simpledsl.feature.messaging"
+            implementationClass = "io.github.qigao.simpledsl.gradle.feature.SimpleDslMessagingPlugin"
+            displayName = "SimpleDSL Messaging Feature"
+            description = "Enable Spring messaging dependencies for a SimpleDSL module"
+            tags = listOf("gradle", "spring", "messaging")
+        }
+        create("simpleDslFeatureJdbc") {
+            id = "io.github.qigao.simpledsl.feature.jdbc"
+            implementationClass = "io.github.qigao.simpledsl.gradle.feature.SimpleDslJdbcPlugin"
+            displayName = "SimpleDSL JDBC Feature"
+            description = "Enable Spring JDBC dependencies for a SimpleDSL module"
+            tags = listOf("gradle", "spring", "jdbc")
+        }
+        create("simpleDslFeatureJooq") {
+            id = "io.github.qigao.simpledsl.feature.jooq"
+            implementationClass = "io.github.qigao.simpledsl.gradle.feature.SimpleDslJooqPlugin"
+            displayName = "SimpleDSL jOOQ Feature"
+            description = "Enable Spring jOOQ dependencies for a SimpleDSL module"
+            tags = listOf("gradle", "spring", "jooq")
+        }
+        create("simpleDslFeatureJpa") {
+            id = "io.github.qigao.simpledsl.feature.jpa"
+            implementationClass = "io.github.qigao.simpledsl.gradle.feature.SimpleDslJpaPlugin"
+            displayName = "SimpleDSL JPA Feature"
+            description = "Enable Spring Data JPA dependencies for a SimpleDSL module"
+            tags = listOf("gradle", "spring", "jpa")
+        }
+        create("simpleDslFeatureRedis") {
+            id = "io.github.qigao.simpledsl.feature.redis"
+            implementationClass = "io.github.qigao.simpledsl.gradle.feature.SimpleDslRedisPlugin"
+            displayName = "SimpleDSL Redis Feature"
+            description = "Enable Spring Data Redis dependencies for a SimpleDSL module"
+            tags = listOf("gradle", "spring", "redis")
+        }
+        create("simpleDslFeatureNative") {
+            id = "io.github.qigao.simpledsl.feature.native"
+            implementationClass = "io.github.qigao.simpledsl.gradle.feature.SimpleDslNativePlugin"
+            displayName = "SimpleDSL Native Feature"
+            description = "Enable GraalVM native build support for a SimpleDSL service"
+            tags = listOf("gradle", "graalvm", "native")
+        }
+        create("simpleDslFeatureLombok") {
+            id = "io.github.qigao.simpledsl.feature.lombok"
+            implementationClass = "io.github.qigao.simpledsl.gradle.feature.SimpleDslLombokPlugin"
+            displayName = "SimpleDSL Lombok Feature"
+            description = "Enable Lombok compile-time dependencies for a SimpleDSL module"
+            tags = listOf("gradle", "java", "lombok")
+        }
     }
 }

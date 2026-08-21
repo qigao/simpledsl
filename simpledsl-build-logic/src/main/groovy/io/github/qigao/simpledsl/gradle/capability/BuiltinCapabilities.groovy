@@ -53,7 +53,7 @@ final class BuiltinCapabilities {
 
     static final CapabilitySpec NATIVE = CapabilitySpec.builder('native')
             .allow(ModuleKind.SPRING_SERVICE)
-            .externalPlugin('graalvm-native')
+            .externalPluginId('org.graalvm.buildtools.native')
             .build()
 
     static final CapabilitySpec LOMBOK = CapabilitySpec.builder('lombok')

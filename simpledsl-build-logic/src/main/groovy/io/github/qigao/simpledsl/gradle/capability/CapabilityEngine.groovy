@@ -59,9 +59,8 @@ final class CapabilityEngine {
 
             validateConflicts(spec)
 
-            spec.externalPluginAliases.each { pluginAlias ->
-                def plugin = catalog.plugin(pluginAlias)
-                project.pluginManager.apply(plugin.id)
+            spec.externalPluginIds.each { pluginId ->
+                project.pluginManager.apply(pluginId)
             }
 
             spec.dependencies.each { binding ->
