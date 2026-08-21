@@ -1,6 +1,7 @@
 package io.github.qigao.simpledsl.gradle.schema
 
 import io.github.qigao.simpledsl.gradle.SimpleDslDependencyAccess
+import io.github.qigao.simpledsl.gradle.catalog.SimpleDslCatalogPlugin
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -10,7 +11,7 @@ final class SimpleDslJooqSchemaPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
         project.pluginManager.apply('org.jooq.jooq-codegen-gradle')
-        project.pluginManager.apply('io.github.qigao.simpledsl.internal.catalog')
+        project.pluginManager.apply(SimpleDslCatalogPlugin)
 
         SimpleDslJooqSchemaExtension schema = project.extensions.create(
                 'simpledslJooq',
