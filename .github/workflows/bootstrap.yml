@@ -26,6 +26,18 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.1.0'
+      - name: Extract reusable bootstrap source
+        if: github.event_name == 'push' && hashFiles('simpledsl-build-bootstrap/src/main/groovy/io/github/qigao/simpledsl/gradle/manifest/DependencyManifestLoader.groovy') == ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/qigao/durex.git /tmp/durex-source
+          bash scripts/extract-bootstrap-from-durex.sh /tmp/durex-source
+          git add -- simpledsl-build-bootstrap/src/main/groovy
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'refactor: migrate SimpleDSL bootstrap sources'
+          git push origin HEAD:${{ github.ref_name }}
       - name: Verify project skeleton
         run: ./gradlew projects verifyProductNamespace --stacktrace
       - name: Verify bootstrap contract
