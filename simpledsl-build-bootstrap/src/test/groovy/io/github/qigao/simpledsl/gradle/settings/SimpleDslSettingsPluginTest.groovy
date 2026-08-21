@@ -29,14 +29,14 @@ version = 25
     }
 
     @Test
-    void rejectsMismatchedSimpleDslPluginVersion() {
+    void rejectsMismatchedSimpleDslBuildPluginVersion() {
         writeBaseConsumer('''
 [java]
 version = 25
 ''')
         Files.writeString(projectDir.resolve('app/build.gradle'), '''
 plugins {
-    id 'io.github.qigao.simpledsl.module' version '9.9.9'
+    id 'io.github.qigao.simpledsl.build' version '9.9.9'
 }
 '''.stripIndent())
 
@@ -44,7 +44,7 @@ plugins {
         String managedVersion = SimpleDslDistribution.version()
 
         assertTrue(result.output.contains('SimpleDSL version conflict'))
-        assertTrue(result.output.contains('Plugin: io.github.qigao.simpledsl.module'))
+        assertTrue(result.output.contains('Plugin: io.github.qigao.simpledsl.build'))
         assertTrue(result.output.contains('Requested: 9.9.9'))
         assertTrue(result.output.contains("Managed: ${managedVersion}"))
     }
