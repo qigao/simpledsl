@@ -39,11 +39,14 @@ jobs:
           fi
           echo "SIMPLEDSL_RELEASE_VERSION=$VERSION" >> "$GITHUB_ENV"
 
+      - name: Clean workspace
+        run: gradle clean --stacktrace
+
       - name: Verify release candidate
         shell: bash
         run: |
           set -euo pipefail
-          gradle clean \
+          gradle \
             verifyProductNamespace \
             :simpledsl-build-bootstrap:check \
             :simpledsl-build-logic:check \
