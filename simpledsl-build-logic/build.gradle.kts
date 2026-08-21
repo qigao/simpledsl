@@ -1,5 +1,6 @@
 plugins {
     groovy
+    `maven-publish`
     alias(libs.plugins.plugin.publish)
 }
 
@@ -158,6 +159,15 @@ gradlePlugin {
             displayName = "SimpleDSL JSON Schema"
             description = "Generate Java sources from JSON Schema with SimpleDSL conventions"
             tags = listOf("gradle", "json-schema", "codegen", "schema")
+        }
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "testPlugin"
+            url = rootProject.layout.buildDirectory.dir("test-plugin-repo").get().asFile.toURI()
         }
     }
 }
