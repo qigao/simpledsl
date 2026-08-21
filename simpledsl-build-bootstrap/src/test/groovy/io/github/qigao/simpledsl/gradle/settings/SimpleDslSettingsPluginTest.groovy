@@ -1,5 +1,6 @@
 package io.github.qigao.simpledsl.gradle.settings
 
+import io.github.qigao.simpledsl.gradle.distribution.SimpleDslDistribution
 import org.gradle.testkit.runner.GradleRunner
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -40,11 +41,12 @@ plugins {
 '''.stripIndent())
 
         def result = runner('help').buildAndFail()
+        String managedVersion = SimpleDslDistribution.version()
 
         assertTrue(result.output.contains('SimpleDSL version conflict'))
         assertTrue(result.output.contains('Plugin: io.github.qigao.simpledsl.module'))
         assertTrue(result.output.contains('Requested: 9.9.9'))
-        assertTrue(result.output.contains('Managed: 0.1.0-SNAPSHOT'))
+        assertTrue(result.output.contains("Managed: ${managedVersion}"))
     }
 
     @Test
