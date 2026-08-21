@@ -12,7 +12,7 @@ final class SimpleDslRegistryBridge {
     static DependencyCatalogSnapshot fromProject(Project project) {
         def registration = project.gradle.sharedServices.registrations.findByName('simpledslDependencyRegistry')
         if (registration == null) {
-            fail('simpledslDependencyRegistry is not available; apply simpledsl.settings in this build')
+            fail('simpledslDependencyRegistry is not available; apply io.github.qigao.simpledsl.settings in this build')
         }
 
         Object service = registration.service.get()
@@ -21,7 +21,7 @@ final class SimpleDslRegistryBridge {
             Method snapshotMethod = service.getClass().getMethod('snapshot')
             raw = snapshotMethod.invoke(service)
         } catch (NoSuchMethodException e) {
-            fail('simpledslDependencyRegistry does not expose the v2 snapshot() contract', e)
+            fail('simpledslDependencyRegistry does not expose the snapshot() contract', e)
             return null
         } catch (InvocationTargetException e) {
             Throwable cause = e.cause ?: e
