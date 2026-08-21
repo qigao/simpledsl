@@ -10,13 +10,15 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   bootstrap:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -30,6 +32,20 @@ jobs:
         run: gradle wrapper --gradle-version 9.1.0 --distribution-type bin
       - name: Verify wrapper
         run: ./gradlew --version
+      - name: Commit generated wrapper
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -- gradlew gradlew.bat gradle/wrapper/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.properties
+          if git diff --cached --quiet; then
+            echo 'Gradle wrapper already committed'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'build: add Gradle 9.1 wrapper'
+          git push origin HEAD:${{ github.ref_name }}
       - uses: actions/upload-artifact@v4
         with:
           name: gradle-wrapper-9.1.0
