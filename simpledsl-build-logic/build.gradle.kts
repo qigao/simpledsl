@@ -22,6 +22,7 @@ dependencies {
     implementation(libs.jsonschema2pojo.gradle)
     testImplementation(gradleTestKit())
     testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 tasks.test {
