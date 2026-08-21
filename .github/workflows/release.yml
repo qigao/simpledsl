@@ -127,7 +127,7 @@ jobs:
             --validate-only \
             --stacktrace
 
-  publish-build-logic:
+  publish_build_logic:
     needs: verify
     if: needs.verify.outputs.target == 'all' || needs.verify.outputs.target == 'build-logic'
     runs-on: ubuntu-latest
@@ -158,16 +158,16 @@ jobs:
             -PreleaseVersion="$SIMPLEDSL_RELEASE_VERSION" \
             --stacktrace
 
-  publish-bootstrap:
+  publish_bootstrap:
     needs:
       - verify
-      - publish-build-logic
+      - publish_build_logic
     if: >-
       always() &&
       needs.verify.result == 'success' &&
       (
         needs.verify.outputs.target == 'bootstrap' ||
-        (needs.verify.outputs.target == 'all' && needs.publish-build-logic.result == 'success')
+        (needs.verify.outputs.target == 'all' && needs.publish_build_logic.result == 'success')
       )
     runs-on: ubuntu-latest
     steps:
