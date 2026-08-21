@@ -22,4 +22,9 @@ if ((${#existing[@]} > 0)); then
     echo 'legacy Durex product namespace leaked into SimpleDSL product files' >&2
     exit 1
   fi
+
+  if grep -RInE '(^|[^[:alnum:]_.])simpledsl\.(settings|module|feature|schema|java-library|spring-library|spring-service)' "${existing[@]}"; then
+    echo 'bare SimpleDSL public plugin id found; use io.github.qigao.simpledsl.*' >&2
+    exit 1
+  fi
 fi
