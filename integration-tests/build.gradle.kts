@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    testImplementation(localGroovy())
     testImplementation(gradleTestKit())
     testImplementation(libs.junit.jupiter)
 }

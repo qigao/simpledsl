@@ -13,6 +13,7 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 dependencies {
+    implementation(localGroovy())
     implementation(libs.spring.boot.gradle)
     implementation(libs.graalvm.native.gradle)
     implementation(libs.jooq.codegen.gradle)

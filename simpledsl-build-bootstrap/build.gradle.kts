@@ -13,6 +13,7 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 dependencies {
+    implementation(localGroovy())
     implementation(libs.tomlj)
     testImplementation(gradleTestKit())
     testImplementation(libs.junit.jupiter)
