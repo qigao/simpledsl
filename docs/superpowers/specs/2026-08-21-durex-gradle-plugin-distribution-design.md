@@ -1,53 +1,120 @@
-# Durex Gradle Plugin Distribution Design
+# SimpleDSL Gradle Plugin Distribution Design
 
 Date: 2026-08-21
-Status: Approved direction / implementation design
+Status: Revised design after namespace review
 Target repository: `qigao/simpledsl`
 Source repository: `qigao/durex`
 
 ## 1. Goal
 
-Move the Durex build platform out of the Durex application repository and turn it into an independently built, tested, versioned, and publishable Gradle plugin product.
+Move the reusable Gradle build platform currently implemented inside `qigao/durex` into the independent product repository `qigao/simpledsl`, and publish it as a first-class Gradle Plugin Portal product.
 
-The migration moves the reusable build infrastructure currently implemented by:
+The source implementation currently lives in:
 
 - `durex/build-bootstrap`
 - `durex/build-logic`
 
-into `qigao/simpledsl` as two product modules:
+The target product modules are renamed to:
 
-- `durex-build-bootstrap`
-- `durex-build-logic`
+- `simpledsl-build-bootstrap`
+- `simpledsl-build-logic`
 
-The first public release targets the Gradle Plugin Portal. The existing public plugin IDs remain `durex.*`; this migration does not introduce a plugin namespace rename.
+The new product does **not** retain `durex` as its public brand or plugin namespace.
 
-## 2. Product boundary
+## 2. Naming and namespace policy
 
-The new repository owns only reusable Gradle build-platform code and its tests/documentation.
+The public product name is **SimpleDSL**.
 
-It owns:
+Because the Gradle Plugin Portal requires new plugin IDs to trace back to the publisher, the public plugin namespace is:
 
-- Durex settings/bootstrap plugins;
-- dependency-manifest parsing and validation;
-- module discovery;
-- Durex module model and capability engine;
-- public module-type plugins;
-- public feature plugins;
-- public schema/code-generation plugins;
-- diagnostics such as `durexProjects`, `durexDependencies`, `durexCapabilities`, and `durexDoctor`;
-- Plugin Portal publication metadata and release automation;
-- isolated consumer contract tests.
+```text
+io.github.qigao.simpledsl.*
+```
 
-It does not own:
+The Maven group is:
 
-- Durex application modules such as Music;
-- runtime application implementations;
-- Durex repository-specific module manifests;
-- application integration tests that only make sense inside `qigao/durex`.
+```text
+io.github.qigao.simpledsl
+```
 
-## 3. Repository layout
+Implementation packages are rooted at:
 
-The target repository is a normal Gradle multi-project plugin build rather than a recursive included-build bootstrap.
+```text
+io.github.qigao.simpledsl.gradle
+```
+
+No new public artifact, plugin ID, extension, task, diagnostic, package, or release metadata uses `durex` naming.
+
+The migration is intentionally breaking because `simpledsl` is a new product boundary rather than a compatibility release of the in-repository Durex build logic.
+
+## 3. Public plugin surface
+
+Target public IDs:
+
+```text
+io.github.qigao.simpledsl.settings
+io.github.qigao.simpledsl.module
+
+io.github.qigao.simpledsl.java-library
+io.github.qigao.simpledsl.spring-library
+io.github.qigao.simpledsl.spring-service
+
+io.github.qigao.simpledsl.feature.aop
+io.github.qigao.simpledsl.feature.transaction
+io.github.qigao.simpledsl.feature.web
+io.github.qigao.simpledsl.feature.http-client
+io.github.qigao.simpledsl.feature.messaging
+io.github.qigao.simpledsl.feature.jdbc
+io.github.qigao.simpledsl.feature.jooq
+io.github.qigao.simpledsl.feature.jpa
+io.github.qigao.simpledsl.feature.redis
+io.github.qigao.simpledsl.feature.native
+io.github.qigao.simpledsl.feature.lombok
+
+io.github.qigao.simpledsl.schema.jooq
+io.github.qigao.simpledsl.schema.json
+```
+
+Internal implementation IDs, if retained, use:
+
+```text
+io.github.qigao.simpledsl.internal.*
+```
+
+They are not documented as consumer API and are not intended as long-term compatibility contracts.
+
+## 4. Old-to-new migration map
+
+The extraction rewrites the public Durex build API as follows:
+
+| Old Durex ID | New SimpleDSL ID |
+| --- | --- |
+| `durex.settings` | `io.github.qigao.simpledsl.settings` |
+| `durex.module` | `io.github.qigao.simpledsl.module` |
+| `durex.java-library` | `io.github.qigao.simpledsl.java-library` |
+| `durex.spring-library` | `io.github.qigao.simpledsl.spring-library` |
+| `durex.spring-service` | `io.github.qigao.simpledsl.spring-service` |
+| `durex.feature.aop` | `io.github.qigao.simpledsl.feature.aop` |
+| `durex.feature.transaction` | `io.github.qigao.simpledsl.feature.transaction` |
+| `durex.feature.web` | `io.github.qigao.simpledsl.feature.web` |
+| `durex.feature.http-client` | `io.github.qigao.simpledsl.feature.http-client` |
+| `durex.feature.messaging` | `io.github.qigao.simpledsl.feature.messaging` |
+| `durex.feature.jdbc` | `io.github.qigao.simpledsl.feature.jdbc` |
+| `durex.feature.jooq` | `io.github.qigao.simpledsl.feature.jooq` |
+| `durex.feature.jpa` | `io.github.qigao.simpledsl.feature.jpa` |
+| `durex.feature.redis` | `io.github.qigao.simpledsl.feature.redis` |
+| `durex.feature.native` | `io.github.qigao.simpledsl.feature.native` |
+| `durex.feature.lombok` | `io.github.qigao.simpledsl.feature.lombok` |
+| `durex.schema.jooq` | `io.github.qigao.simpledsl.schema.jooq` |
+| `durex.schema.json` | `io.github.qigao.simpledsl.schema.json` |
+
+The old `durex.*` IDs are **not** published from `simpledsl` as aliases.
+
+Any temporary compatibility bridge belongs only in the downstream `qigao/durex` migration branch and is removed after cutover.
+
+## 5. Repository layout
+
+The target repository is a normal Gradle multi-project plugin build:
 
 ```text
 simpledsl/
@@ -59,10 +126,10 @@ simpledsl/
 │   └── wrapper/
 ├── gradlew
 ├── gradlew.bat
-├── durex-build-bootstrap/
+├── simpledsl-build-bootstrap/
 │   ├── build.gradle.kts
 │   └── src/
-├── durex-build-logic/
+├── simpledsl-build-logic/
 │   ├── build.gradle.kts
 │   └── src/
 ├── integration-tests/
@@ -71,75 +138,63 @@ simpledsl/
 └── .github/workflows/
 ```
 
-The root build includes both modules directly. Building the plugin product must not require applying Durex to build Durex itself.
+The product build must not require applying SimpleDSL to build SimpleDSL itself.
 
-## 4. Publication units
+## 6. Publication units
 
-### 4.1 `durex-build-bootstrap`
+### 6.1 `simpledsl-build-bootstrap`
 
-This artifact contains settings-time infrastructure and publishes at least:
+This artifact contains settings-time infrastructure and publishes:
 
-- `durex.settings`
-
-Internal settings/bootstrap implementation can remain in the same artifact when it is required to build or test the product, but internal IDs are not part of the supported consumer API.
+```text
+io.github.qigao.simpledsl.settings
+```
 
 Responsibilities:
 
-- load and validate the consumer Durex dependency manifest;
+- load and validate the consumer SimpleDSL dependency manifest;
 - create the dependency registry service;
 - discover and include consumer modules;
 - expose root diagnostics;
-- establish Durex plugin-version resolution for the rest of the build.
+- establish coherent SimpleDSL plugin-version resolution for the rest of the build.
 
-### 4.2 `durex-build-logic`
+### 6.2 `simpledsl-build-logic`
 
-This artifact contains project plugins and depends on the stable bootstrap/model contracts it needs.
-
-Public plugin surface remains:
+This artifact contains project-level binary Gradle plugins:
 
 ```text
-durex.module
-
-durex.java-library
-durex.spring-library
-durex.spring-service
-
-durex.feature.aop
-durex.feature.transaction
-durex.feature.web
-durex.feature.http-client
-durex.feature.messaging
-durex.feature.jdbc
-durex.feature.jooq
-durex.feature.jpa
-durex.feature.redis
-durex.feature.native
-durex.feature.lombok
-
-durex.schema.jooq
-durex.schema.json
+io.github.qigao.simpledsl.module
+io.github.qigao.simpledsl.java-library
+io.github.qigao.simpledsl.spring-library
+io.github.qigao.simpledsl.spring-service
+io.github.qigao.simpledsl.feature.*
+io.github.qigao.simpledsl.schema.*
 ```
 
-The two publication units use the same release version.
+The bootstrap and build-logic artifacts always use one shared release version.
 
-## 5. Public plugins become binary plugin entry points
+## 7. Public plugins are binary plugins
 
-The current public module/feature/schema plugins in `qigao/durex` are largely precompiled script plugins. The distribution repository converts the supported `durex.*` surface into binary Gradle plugin entry points with explicit implementation classes.
+The existing public Durex module/feature/schema plugins are largely precompiled script plugins. The SimpleDSL product converts the public surface into binary Gradle plugins with explicit implementation classes.
 
-Reasons:
+Examples:
 
-- stable public entry points;
-- explicit plugin metadata;
-- easier TestKit testing;
-- predictable external dependency metadata;
-- cleaner separation between public and internal implementation;
-- simpler Plugin Portal publication and evolution.
+```text
+io.github.qigao.simpledsl.settings
+  -> io.github.qigao.simpledsl.gradle.settings.SimpleDslSettingsPlugin
 
-Internal convention helpers may remain implementation details where useful, but consumers must never depend on their file layout or internal plugin IDs.
+io.github.qigao.simpledsl.spring-service
+  -> io.github.qigao.simpledsl.gradle.module.SpringServicePlugin
 
-## 6. Consumer contract
+io.github.qigao.simpledsl.feature.web
+  -> io.github.qigao.simpledsl.gradle.feature.WebFeaturePlugin
+```
 
-A third-party build versions Durex once, at settings time:
+This creates stable Plugin Portal metadata and external API boundaries while allowing internal helper classes or convention fragments to remain implementation details.
+
+## 8. Consumer contract
+
+A consumer versions SimpleDSL once in `settings.gradle`:
 
 ```groovy
 pluginManagement {
@@ -150,130 +205,189 @@ pluginManagement {
 }
 
 plugins {
-    id 'durex.settings' version '0.1.0'
+    id 'io.github.qigao.simpledsl.settings' version '0.1.0'
 }
 
 rootProject.name = 'sample'
 ```
 
-Module builds then use Durex public plugins without repeating the version:
+Project build files then use the public plugin IDs without repeating a version:
 
 ```groovy
 plugins {
-    id 'durex.spring-service'
-    id 'durex.feature.web'
+    id 'io.github.qigao.simpledsl.spring-service'
+    id 'io.github.qigao.simpledsl.feature.web'
 }
 ```
 
-`durex.settings` owns the release-coherence rule for Durex plugin requests:
+`SimpleDslSettingsPlugin` owns the release-coherence rule:
 
-- an unversioned `durex.*` plugin request resolves to the running Durex distribution version;
-- an explicitly requested matching version is accepted;
-- an explicitly requested different Durex version fails with a clear version-conflict diagnostic.
+- unversioned `io.github.qigao.simpledsl.*` requests resolve to the running SimpleDSL version;
+- an explicit matching version is accepted;
+- an explicit conflicting version fails with a clear diagnostic.
 
-The implementation version is embedded in the bootstrap artifact as generated build metadata and is not inferred from the consumer manifest.
+## 9. SimpleDSL DSL and diagnostics naming
 
-## 7. Dependency and version ownership
+The consumer-facing DSL is renamed as part of the extraction.
 
-Durex release dependencies and consumer application dependencies are separate concerns.
+Settings extension:
 
-### Durex release owns
+```text
+simpledslSettings
+```
 
-The plugin product build owns the versions needed to implement the plugins themselves, including:
+Module extension:
 
-- Gradle Plugin Publish plugin;
+```text
+simpledsl
+```
+
+Diagnostics/tasks:
+
+```text
+simpledslProjects
+simpledslDependencies
+simpledslCapabilities
+simpledslDoctor
+```
+
+Model and implementation classes are renamed from Durex-specific names to SimpleDSL-specific names where they are part of the extracted product.
+
+Error prefixes use:
+
+```text
+SimpleDSL configuration error
+SimpleDSL bootstrap error
+SimpleDSL module discovery error
+SimpleDSL Doctor
+```
+
+No public diagnostic recommends `durex.*` IDs.
+
+## 10. Consumer manifest layout
+
+SimpleDSL owns its own consumer configuration namespace.
+
+Recommended layout:
+
+```text
+gradle/simpledsl/
+├── dependencies.toml
+├── modules.toml
+└── dependencies/
+    ├── spring.toml
+    ├── database.toml
+    ├── test.toml
+    └── utils.toml
+```
+
+`dependencies.toml` is the root dependency manifest and may include the split dependency files.
+
+This avoids carrying the historical file name `gradle/dependencies/durex.toml` into the new product.
+
+The settings extension allows callers to override these locations when needed.
+
+## 11. Dependency and version ownership
+
+SimpleDSL release implementation dependencies and consumer application dependency policy are separate.
+
+### SimpleDSL release owns
+
+The plugin repository owns implementation versions for:
+
+- `com.gradle.plugin-publish`;
 - Spring Boot Gradle plugin API;
 - GraalVM Native Gradle plugin API;
 - jOOQ code-generation Gradle plugin API;
 - jsonschema2pojo Gradle plugin API;
-- TOML parser used by bootstrap.
+- TOML parser;
+- any other dependency required to execute SimpleDSL itself.
 
-These versions live in the plugin repository build configuration, preferably `gradle/libs.versions.toml`. A consumer manifest cannot replace the implementation classpath of an already released Durex plugin.
+These versions live in the SimpleDSL repository, preferably in `gradle/libs.versions.toml`.
 
 ### Consumer owns
 
-The consumer Durex manifest continues to own application dependency policy:
+The consumer SimpleDSL manifest owns application dependency policy:
 
-- managed Java version;
-- Spring/platform BOM version;
-- database libraries;
-- test libraries;
-- application-facing library aliases;
-- external application plugin versions that are intentionally part of the consumer policy.
+- Java version policy;
+- Spring/platform BOM versions;
+- application/runtime libraries;
+- database/test/tool libraries;
+- application-level aliases.
 
-When a consumer manifest declares an entry that conflicts with an implementation-owned Durex plugin requirement, Durex reports an explicit compatibility error rather than silently changing its implementation classpath.
+A consumer cannot rewrite the already-published implementation classpath of SimpleDSL.
 
-## 8. Self-hosting policy
+## 12. Self-hosting policy
 
-The new plugin repository does not use `durex.settings` or `durex.internal.build-logic-settings` to bootstrap itself.
+The SimpleDSL repository builds with ordinary Gradle configuration and does not apply `io.github.qigao.simpledsl.settings` to bootstrap itself.
 
-It uses ordinary Gradle build configuration to compile and publish Durex.
+This deliberately prevents a circular self-hosting dependency.
 
-This breaks the current cycle:
-
-```text
-Durex manifest
-  -> bootstrap included build
-  -> build-logic included build
-  -> Durex plugins
-```
-
-and replaces it with:
+The product build flow is:
 
 ```text
-standard Gradle plugin build
-  -> durex-build-bootstrap artifact
-  -> durex-build-logic artifact
-  -> published plugin markers
+standard Gradle build
+  -> simpledsl-build-bootstrap
+  -> simpledsl-build-logic
+  -> plugin implementation artifacts
+  -> plugin marker artifacts
 ```
 
-The consumer still receives Durex's manifest/capability model; only the product's own build stops depending on that consumer mechanism.
+## 13. Local publication contract
 
-## 9. Local publication contract
+Before Plugin Portal publication, CI must publish all implementation artifacts and plugin markers into an isolated Maven repository under `build/`.
 
-Before any Plugin Portal upload, the repository must publish both plugin modules and plugin markers into an isolated local Maven repository under `build/`.
+The standalone consumer fixture resolves only those published artifacts.
 
-The consumer integration fixture must resolve from that Maven repository and must not use:
+It must not use:
 
-- `includeBuild('../durex-build-bootstrap')`;
-- `includeBuild('../durex-build-logic')`;
-- direct project dependencies on either plugin module.
+- `includeBuild('../simpledsl-build-bootstrap')`;
+- `includeBuild('../simpledsl-build-logic')`;
+- direct project dependencies on either implementation module.
 
-This proves the same artifact/marker resolution path used by external consumers.
+## 14. Consumer fixture
 
-## 10. Consumer fixture
-
-`integration-tests/consumer` is a standalone sample build with its own:
+`integration-tests/consumer` is a standalone external-style build with its own:
 
 - `settings.gradle`;
-- `gradle/dependencies/*.toml` fixture manifest;
-- module directory;
-- Spring service source/test.
+- `gradle/simpledsl/**` manifests;
+- application module;
+- Spring source/test.
 
 It verifies:
 
-1. `durex.settings` resolves from the local Maven publication by plugin marker;
-2. unversioned project-level `durex.*` plugins resolve to the same distribution version;
-3. module discovery works without access to the source repository;
-4. `durexProjects` and `durexDependencies` work;
-5. `durexCapabilities` and `durexDoctor` work;
-6. one Spring service compiles/tests;
-7. configuration cache can be reused;
-8. a mismatched explicit Durex plugin version fails with a specific diagnostic.
+1. `io.github.qigao.simpledsl.settings` resolves through a plugin marker;
+2. project-level SimpleDSL plugins resolve to the same version;
+3. module discovery works without access to SimpleDSL source;
+4. `simpledslProjects` and `simpledslDependencies` work;
+5. `simpledslCapabilities` and `simpledslDoctor` work;
+6. one Spring service compiles and tests;
+7. configuration cache is reusable;
+8. an explicit mismatched SimpleDSL plugin version fails with a precise diagnostic;
+9. no output or public metadata contains stale `durex.*` names.
 
-## 11. Plugin Portal configuration
+## 15. Plugin Portal configuration
 
-The publication build applies the current `com.gradle.plugin-publish` 2.x line and declares complete Plugin Portal metadata for every public plugin:
+The publication build uses the current `com.gradle.plugin-publish` 2.x line and Gradle plugin development metadata.
+
+Maven group:
+
+```text
+io.github.qigao.simpledsl
+```
+
+Every public plugin declares:
 
 - plugin ID;
 - implementation class;
 - display name;
-- description;
+- English description;
 - tags;
 - website;
-- VCS URL.
+- VCS URL;
+- declared Gradle feature compatibility such as configuration-cache support where applicable.
 
-The repository must contain an English README describing installation and usage because Plugin Portal approval requires useful public documentation.
+The project README is English-first for Plugin Portal review and contains installation examples using only `io.github.qigao.simpledsl.*`.
 
 Pre-release verification includes:
 
@@ -284,127 +398,122 @@ Pre-release verification includes:
 ./gradlew publishPlugins --validate-only
 ```
 
-Actual publication uses Plugin Portal credentials supplied only through CI/release secrets:
+Credentials are supplied only through:
 
 ```text
 GRADLE_PUBLISH_KEY
 GRADLE_PUBLISH_SECRET
 ```
 
-No publish credential is committed to the repository.
+## 16. Versioning and release
 
-## 12. Versioning and release
+Initial release target:
 
-Initial target release: `0.1.0`.
+```text
+0.1.0
+```
 
-The release version is one value shared by both plugin modules and every marker artifact. Releases are immutable.
+All SimpleDSL implementation artifacts and plugin marker artifacts use the same immutable release version.
 
 Recommended release flow:
 
 ```text
 PR CI
-  -> build + tests + local consumer contract + validate-only
+  -> build + tests + local publication + consumer contract + validate-only
 merge to master
-  -> no automatic public release
+  -> no public publish
 tag v0.1.0
   -> release workflow
   -> publishPlugins
-  -> Plugin Portal review/approval for initial IDs
+  -> initial Plugin Portal review
 ```
 
-A later release changes both publication units together even when only one implementation module changed. This avoids mixed bootstrap/build-logic compatibility states.
+## 17. Source migration
 
-## 13. Java and Gradle baseline
+Migration is selective rather than a blind copy.
 
-The first migration preserves the existing Durex platform baseline:
+Move/rewrite from `qigao/durex`:
 
-- Gradle 9.1.x;
-- Java 25 as the default managed application toolchain.
+- reusable manifest parser/registry code;
+- module discovery and project registry code;
+- module model/capability engine;
+- reusable diagnostics;
+- generic build logic tests/fixtures;
+- schema plugin implementations/tests;
+- module and feature plugin behavior.
 
-The plugin implementation should avoid unnecessarily emitting Java-25-only bytecode where Gradle API compatibility permits a lower target. Broadening the supported Gradle/JVM matrix is a follow-up compatibility task and must not block the first extraction.
+Rename while moving:
 
-## 14. Source migration
-
-Migration is selective, not a blind directory copy.
-
-Move from `qigao/durex`:
-
-- reusable `build-bootstrap/src` implementation;
-- reusable bootstrap fixtures/tests;
-- reusable `build-logic/src` implementation;
-- generic build-logic fixtures/tests;
-- plugin namespace/diagnostic tests;
-- schema plugin smoke fixtures that do not depend on application modules.
-
-Rewrite during migration:
-
-- build files;
-- self-bootstrap settings;
-- public precompiled script plugin entry points;
-- implementation dependency wiring;
-- paths that assume the Durex application repository root;
-- CI workflows.
+- Java/Groovy packages from `com.github.durex...` to `io.github.qigao.simpledsl...`;
+- classes named `Durex*` to `SimpleDsl*` where they belong to the product;
+- Gradle extension/task names from `durex*` to `simpledsl*`;
+- plugin IDs from `durex.*` to `io.github.qigao.simpledsl.*`;
+- manifest defaults and diagnostic strings.
 
 Do not move:
 
-- Music migration fixtures;
-- application/runtime source modules;
-- legacy migration plans unrelated to plugin distribution;
-- Durex application CI.
+- Music/runtime application modules;
+- Durex application CI;
+- application-specific manifests;
+- legacy Durex migration documentation not required by the plugin product.
 
-## 15. Downstream Durex cutover
+## 18. Downstream `qigao/durex` cutover
 
-`qigao/durex` does not delete its in-repository plugin sources until the extracted repository passes the isolated consumer contract.
+`qigao/durex` keeps its local implementation until SimpleDSL proves the external consumer contract.
 
 Cutover sequence:
 
-1. build and locally publish the extracted plugin product;
-2. prove the standalone consumer fixture;
-3. publish/approve the first Plugin Portal release;
-4. change `qigao/durex` to consume `durex.settings` by released version;
-5. remove `build-bootstrap` and `build-logic` from `qigao/durex`;
-6. keep Durex application-specific dependency/module manifests in `qigao/durex`;
-7. run the full Durex Spring CI against the published plugin product.
+1. extract, rename, and build SimpleDSL;
+2. publish to local test repository;
+3. prove standalone consumer fixture;
+4. publish and obtain approval for `0.1.0` on the Plugin Portal;
+5. update `qigao/durex` settings/build files from `durex.*` to `io.github.qigao.simpledsl.*`;
+6. rename Durex repository manifest paths to the SimpleDSL consumer layout;
+7. run full Durex CI using the released SimpleDSL version;
+8. delete local `build-bootstrap` and `build-logic` from `qigao/durex`;
+9. remove any temporary Durex-only compatibility bridge.
 
-This keeps the application repository buildable throughout the extraction.
+The old plugin IDs are not part of the SimpleDSL release contract.
 
-## 16. CI gates
+## 19. CI gates
 
-Every PR in `simpledsl` must verify:
+Every PR in `simpledsl` verifies:
 
 - plugin compilation;
 - unit/TestKit tests;
-- plugin validation;
-- local Maven publication metadata;
+- Gradle plugin validation;
+- local Maven publication;
 - plugin marker resolution;
-- isolated consumer contract;
+- standalone consumer contract;
 - configuration cache;
-- legacy/internal plugin namespace guards;
-- `publishPlugins --validate-only` without credentials when supported by the publish plugin configuration.
+- public namespace guard rejecting `durex.*` leakage;
+- package/diagnostic guard rejecting stale `com.github.durex` / `Durex` public naming;
+- `publishPlugins --validate-only` where supported.
 
-Release publication is a separate tag-triggered workflow with GitHub Environment/secrets protection.
+Release publication runs only from protected release/tag workflow with Plugin Portal secrets.
 
-## 17. Non-goals
+## 20. Non-goals
 
-The first extraction does not:
+The first release does not:
 
-- rename `durex.*` to `simpledsl.*`;
-- redesign the capability DSL;
+- publish compatibility aliases under `durex.*`;
 - add observability/OpenAPI/Protobuf features;
-- publish Durex application runtime libraries;
-- automatically publish on every merge;
-- guarantee compatibility with Gradle versions older than the current platform baseline;
-- delete the original implementation before the extracted consumer contract and first release are proven.
+- redesign the capability semantics beyond the naming/product extraction needed for SimpleDSL;
+- publish Durex runtime libraries;
+- automatically publish every merge;
+- delete Durex local build logic before external consumer validation succeeds.
 
-## 18. Success criteria
+## 21. Success criteria
 
-The migration is complete when all of the following are true:
+The migration is complete when:
 
-1. `qigao/simpledsl` builds Durex plugins without depending on `qigao/durex` source or `includeBuild` bootstrap;
-2. `durex-build-bootstrap` and `durex-build-logic` are independently produced artifacts with one shared version;
-3. every supported public `durex.*` plugin has Plugin Portal-compatible marker metadata;
-4. an isolated consumer resolves and uses the plugins only through published test artifacts;
-5. `publishPlugins --validate-only` succeeds;
-6. public README and plugin metadata satisfy Plugin Portal review requirements;
-7. the repository is ready for a credentialed `v0.1.0` publication;
-8. after Portal approval, `qigao/durex` can consume the released plugins and remove its local copies.
+1. `qigao/simpledsl` builds independently of `qigao/durex`;
+2. the public product namespace is exclusively `io.github.qigao.simpledsl.*`;
+3. Maven implementation coordinates use `io.github.qigao.simpledsl`;
+4. public source packages/DSL/tasks/diagnostics use SimpleDSL naming rather than Durex naming;
+5. `simpledsl-build-bootstrap` and `simpledsl-build-logic` publish with one release version;
+6. an isolated consumer resolves all required plugins only through published artifacts and plugin markers;
+7. `publishPlugins --validate-only` succeeds;
+8. README and plugin metadata satisfy Plugin Portal review requirements;
+9. the `0.1.0` release is ready for Plugin Portal submission;
+10. `qigao/durex` can migrate to the released SimpleDSL plugin IDs and remove its in-repository copies.
