@@ -66,34 +66,34 @@ class SimpleDslExtension {
     }
 
     void aop() {
-        project.pluginManager.apply('simpledsl.feature.aop')
+        project.pluginManager.apply('io.github.qigao.simpledsl.feature.aop')
     }
 
     void transaction() {
-        project.pluginManager.apply('simpledsl.feature.transaction')
+        project.pluginManager.apply('io.github.qigao.simpledsl.feature.transaction')
     }
 
     void web() {
-        project.pluginManager.apply('simpledsl.feature.web')
+        project.pluginManager.apply('io.github.qigao.simpledsl.feature.web')
     }
 
     void httpClient() {
-        project.pluginManager.apply('simpledsl.feature.http-client')
+        project.pluginManager.apply('io.github.qigao.simpledsl.feature.http-client')
     }
 
     void messaging() {
-        project.pluginManager.apply('simpledsl.feature.messaging')
+        project.pluginManager.apply('io.github.qigao.simpledsl.feature.messaging')
     }
 
     void redis() {
-        project.pluginManager.apply('simpledsl.feature.redis')
+        project.pluginManager.apply('io.github.qigao.simpledsl.feature.redis')
     }
 
     void nativeImage() {
-        project.pluginManager.apply('simpledsl.feature.native')
+        project.pluginManager.apply('io.github.qigao.simpledsl.feature.native')
     }
 
     void lombok() {
-        project.pluginManager.apply('simpledsl.feature.lombok')
+        project.pluginManager.apply('io.github.qigao.simpledsl.feature.lombok')
     }
 }
