@@ -33,7 +33,7 @@ class SchemaPluginConfigurationTest {
                         ],
                         [:]))
 
-        project.pluginManager.apply('io.github.qigao.simpledsl.schema.jooq')
+        project.pluginManager.apply(SimpleDslJooqSchemaPlugin)
 
         def schema = project.extensions.getByType(SimpleDslJooqSchemaExtension)
         assertEquals('database/schema/**/*.sql', schema.source)
@@ -48,7 +48,7 @@ class SchemaPluginConfigurationTest {
         def project = ProjectBuilder.builder().build()
         project.pluginManager.apply('java')
 
-        project.pluginManager.apply('io.github.qigao.simpledsl.schema.json')
+        project.pluginManager.apply(SimpleDslJsonSchemaPlugin)
 
         def schema = project.extensions.getByType(SimpleDslJsonSchemaExtension)
         assertEquals('json', schema.source)
