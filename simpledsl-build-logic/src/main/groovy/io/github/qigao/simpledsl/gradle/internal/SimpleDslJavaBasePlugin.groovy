@@ -1,7 +1,7 @@
 package io.github.qigao.simpledsl.gradle.internal
 
 import io.github.qigao.simpledsl.gradle.SimpleDslDependencyAccess
-import org.gradle.api.JavaVersion
+import io.github.qigao.simpledsl.gradle.SimpleDslModulePlugin
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPluginExtension
@@ -12,7 +12,7 @@ final class SimpleDslJavaBasePlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
         project.pluginManager.apply('java')
-        project.pluginManager.apply('io.github.qigao.simpledsl.module')
+        project.pluginManager.apply(SimpleDslModulePlugin)
 
         int javaVersion = SimpleDslDependencyAccess.javaVersion(project)
         project.extensions.getByType(JavaPluginExtension).toolchain.languageVersion

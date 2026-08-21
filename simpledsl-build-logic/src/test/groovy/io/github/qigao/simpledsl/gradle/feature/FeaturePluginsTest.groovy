@@ -7,7 +7,8 @@ import io.github.qigao.simpledsl.gradle.catalog.CatalogLibrary
 import io.github.qigao.simpledsl.gradle.catalog.CatalogPlatform
 import io.github.qigao.simpledsl.gradle.catalog.DependencyCatalogSnapshot
 import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
-import org.gradle.api.GradleException
+import io.github.qigao.simpledsl.gradle.module.SimpleDslJavaLibraryPlugin
+import io.github.qigao.simpledsl.gradle.module.SimpleDslSpringServicePlugin
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Test
 
@@ -22,11 +23,11 @@ class FeaturePluginsTest {
     }
 
     @Test
-    void webFeatureActivatesServiceDependencies() {
+    void webCapabilityActivatesServiceDependenciesWithoutPublicFeaturePluginId() {
         def project = projectWithCatalog()
-        project.pluginManager.apply('io.github.qigao.simpledsl.spring-service')
+        project.pluginManager.apply(SimpleDslSpringServicePlugin)
 
-        project.pluginManager.apply('io.github.qigao.simpledsl.feature.web')
+        project.extensions.getByType(SimpleDslExtension).web()
 
         def model = project.extensions.getByType(SimpleDslModuleModel)
         assertTrue(model.capabilities.get().contains('web'))
@@ -36,9 +37,9 @@ class FeaturePluginsTest {
     }
 
     @Test
-    void convenienceDslResolvesPublicFeaturePluginIds() {
+    void convenienceDslAppliesInternalCapabilities() {
         def project = projectWithCatalog()
-        project.pluginManager.apply('io.github.qigao.simpledsl.spring-service')
+        project.pluginManager.apply(SimpleDslSpringServicePlugin)
         def simpledsl = project.extensions.getByType(SimpleDslExtension)
 
         simpledsl.aop()
@@ -60,18 +61,16 @@ class FeaturePluginsTest {
     }
 
     @Test
-    void nativeFeatureRejectsJavaLibrary() {
+    void nativeCapabilityRejectsJavaLibrary() {
         def project = projectWithCatalog()
-        project.pluginManager.apply('io.github.qigao.simpledsl.java-library')
+        project.pluginManager.apply(SimpleDslJavaLibraryPlugin)
 
-        def error = assertThrows(GradleException) {
-            project.pluginManager.apply('io.github.qigao.simpledsl.feature.native')
+        def error = assertThrows(SimpleDslConfigurationException) {
+            project.extensions.getByType(SimpleDslExtension).nativeImage()
         }
 
-        assertTrue(error.cause instanceof SimpleDslConfigurationException)
-        def cause = error.cause as SimpleDslConfigurationException
-        assertTrue(cause.message.contains('SimpleDSL configuration error'))
-        assertTrue(cause.message.contains("capability 'native' is not supported"))
+        assertTrue(error.message.contains('SimpleDSL configuration error'))
+        assertTrue(error.message.contains("capability 'native' is not supported"))
     }
 
     private static def projectWithCatalog() {

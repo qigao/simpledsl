@@ -4,14 +4,14 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 
 /**
- * Public SimpleDSL build entry point.
+ * Public SimpleDSL project entry point.
  *
- * Module types, features and schema options are internal capabilities
- * selected from SimpleDSL TOML configuration; they are not Gradle plugins.
+ * Module types, features and schema options are internal SimpleDSL behavior;
+ * they are not public Gradle plugin IDs.
  */
 class SimpleDslBuildPlugin implements Plugin<Project> {
     @Override
     void apply(Project project) {
-        project.extensions.create('simpledsl', SimpleDslBuildExtension)
+        project.pluginManager.apply(SimpleDslModulePlugin)
     }
 }

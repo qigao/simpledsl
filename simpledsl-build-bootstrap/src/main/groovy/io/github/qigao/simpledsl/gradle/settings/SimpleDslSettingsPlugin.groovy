@@ -27,7 +27,7 @@ class SimpleDslSettingsPlugin implements Plugin<Settings> {
             String pluginId = details.requested.id.id
             if (pluginId == SimpleDslDistribution.SETTINGS_PLUGIN_ID) return
 
-            if (pluginId.startsWith(SimpleDslDistribution.PUBLIC_PREFIX)) {
+            if (pluginId == SimpleDslDistribution.BUILD_PLUGIN_ID) {
                 String managed = SimpleDslDistribution.version()
                 String requested = details.requested.version
                 if (requested && requested != managed) {

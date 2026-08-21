@@ -1,4 +1,8 @@
 plugins {
-    id 'io.github.qigao.simpledsl.spring-service'
-    id 'io.github.qigao.simpledsl.feature.web'
+    id 'io.github.qigao.simpledsl.build'
+}
+
+simpledsl {
+    springService()
+    web()
 }

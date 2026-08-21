@@ -17,7 +17,7 @@ class ModuleTypePluginsTest {
     void javaLibraryClaimsModuleAndUsesConsumerJavaVersion() {
         def project = projectWithCatalog()
 
-        project.pluginManager.apply('io.github.qigao.simpledsl.java-library')
+        project.pluginManager.apply(SimpleDslJavaLibraryPlugin)
 
         assertEquals(ModuleKind.JAVA_LIBRARY, project.extensions.getByType(SimpleDslModuleModel).moduleKind.get())
         assertEquals(25, project.extensions.getByType(JavaPluginExtension).toolchain.languageVersion.get().asInt())
@@ -28,7 +28,7 @@ class ModuleTypePluginsTest {
     void springLibraryClaimsModule() {
         def project = projectWithCatalog()
 
-        project.pluginManager.apply('io.github.qigao.simpledsl.spring-library')
+        project.pluginManager.apply(SimpleDslSpringLibraryPlugin)
 
         assertEquals(ModuleKind.SPRING_LIBRARY, project.extensions.getByType(SimpleDslModuleModel).moduleKind.get())
     }
@@ -37,7 +37,7 @@ class ModuleTypePluginsTest {
     void springServiceClaimsModule() {
         def project = projectWithCatalog()
 
-        project.pluginManager.apply('io.github.qigao.simpledsl.spring-service')
+        project.pluginManager.apply(SimpleDslSpringServicePlugin)
 
         assertEquals(ModuleKind.SPRING_SERVICE, project.extensions.getByType(SimpleDslModuleModel).moduleKind.get())
     }
