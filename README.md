@@ -34,7 +34,7 @@ pluginManagement {
 }
 
 plugins {
-    id 'io.github.qigao.simpledsl.settings' version '0.1.0'
+    id 'io.github.qigao.simpledsl.settings' version '0.1.1'
 }
 
 rootProject.name = 'example'
@@ -133,6 +133,50 @@ These names select internal behavior. There are no public markers such as `io.gi
 
 Capabilities validate module compatibility, dependency requirements, conflicts, and platform bindings. External Gradle plugins required by a capability are loaded from their original third-party plugin artifacts.
 
+## Schema code generation
+
+Schema generators are activated through the existing `simpledsl` project DSL. They do not have public Plugin Portal IDs.
+
+For jOOQ DDL generation:
+
+```groovy
+plugins {
+    id 'io.github.qigao.simpledsl.build'
+}
+
+simpledsl {
+    javaLibrary()
+    jooqSchema()
+}
+
+simpledslJooq {
+    source = 'database/schema/**/*.sql'
+    packageName = 'com.example.model'
+}
+```
+
+For JSON Schema generation:
+
+```groovy
+plugins {
+    id 'io.github.qigao.simpledsl.build'
+}
+
+simpledsl {
+    javaLibrary()
+    jsonSchema()
+}
+
+simpledslJsonSchema {
+    source = 'json'
+    packageName = 'com.example.model'
+    validation = true
+    builders = true
+}
+```
+
+`jooqSchema()` and `jsonSchema()` activate internal SimpleDSL schema helpers. Consumers do not apply or reference `SimpleDslJooqSchemaPlugin`, `SimpleDslJsonSchemaPlugin`, or any `io.github.qigao.simpledsl.schema.*` marker.
+
 ## Diagnostics
 
 The settings entry registers:
@@ -196,7 +240,7 @@ Validate Plugin Portal metadata without uploading:
 ./gradlew \
   :simpledsl-build-bootstrap:publishPlugins \
   :simpledsl-build-logic:publishPlugins \
-  -PreleaseVersion=0.1.0 \
+  -PreleaseVersion=0.1.1 \
   --validate-only
 ```
 
