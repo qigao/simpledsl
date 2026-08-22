@@ -7,6 +7,8 @@ import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
 import io.github.qigao.simpledsl.gradle.module.SimpleDslJavaLibraryPlugin
 import io.github.qigao.simpledsl.gradle.module.SimpleDslSpringLibraryPlugin
 import io.github.qigao.simpledsl.gradle.module.SimpleDslSpringServicePlugin
+import io.github.qigao.simpledsl.gradle.schema.SimpleDslJooqSchemaPlugin
+import io.github.qigao.simpledsl.gradle.schema.SimpleDslJsonSchemaPlugin
 import org.gradle.api.Action
 import org.gradle.api.Project
 
@@ -43,6 +45,14 @@ class SimpleDslExtension {
 
     void springService() {
         project.pluginManager.apply(SimpleDslSpringServicePlugin)
+    }
+
+    void jooqSchema() {
+        project.pluginManager.apply(SimpleDslJooqSchemaPlugin)
+    }
+
+    void jsonSchema() {
+        project.pluginManager.apply(SimpleDslJsonSchemaPlugin)
     }
 
     SimpleDslPersistenceExtension getPersistence() {
