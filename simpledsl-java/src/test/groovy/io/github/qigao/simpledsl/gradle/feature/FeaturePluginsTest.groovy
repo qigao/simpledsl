@@ -1,14 +1,13 @@
 package io.github.qigao.simpledsl.gradle.feature
 
 import io.github.qigao.simpledsl.gradle.SimpleDslConfigurationException
-import io.github.qigao.simpledsl.gradle.SimpleDslExtension
 import io.github.qigao.simpledsl.gradle.capability.BuiltinCapabilities
 import io.github.qigao.simpledsl.gradle.catalog.CatalogLibrary
 import io.github.qigao.simpledsl.gradle.catalog.CatalogPlatform
 import io.github.qigao.simpledsl.gradle.catalog.DependencyCatalogSnapshot
+import io.github.qigao.simpledsl.gradle.java.SimpleDslJavaExtension
+import io.github.qigao.simpledsl.gradle.java.SimpleDslJavaPlugin
 import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
-import io.github.qigao.simpledsl.gradle.module.SimpleDslJavaLibraryPlugin
-import io.github.qigao.simpledsl.gradle.module.SimpleDslSpringServicePlugin
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Test
 
@@ -24,10 +23,10 @@ class FeaturePluginsTest {
 
     @Test
     void webCapabilityActivatesServiceDependenciesWithoutPublicFeaturePluginId() {
-        def project = projectWithCatalog()
-        project.pluginManager.apply(SimpleDslSpringServicePlugin)
-
-        project.extensions.getByType(SimpleDslExtension).web()
+        def project = javaProjectWithCatalog()
+        def simpledsl = project.extensions.getByType(SimpleDslJavaExtension)
+        simpledsl.springService()
+        simpledsl.web()
 
         def model = project.extensions.getByType(SimpleDslModuleModel)
         assertTrue(model.capabilities.get().contains('web'))
@@ -38,9 +37,9 @@ class FeaturePluginsTest {
 
     @Test
     void convenienceDslAppliesInternalCapabilities() {
-        def project = projectWithCatalog()
-        project.pluginManager.apply(SimpleDslSpringServicePlugin)
-        def simpledsl = project.extensions.getByType(SimpleDslExtension)
+        def project = javaProjectWithCatalog()
+        def simpledsl = project.extensions.getByType(SimpleDslJavaExtension)
+        simpledsl.springService()
 
         simpledsl.aop()
         simpledsl.transaction()
@@ -62,18 +61,19 @@ class FeaturePluginsTest {
 
     @Test
     void nativeCapabilityRejectsJavaLibrary() {
-        def project = projectWithCatalog()
-        project.pluginManager.apply(SimpleDslJavaLibraryPlugin)
+        def project = javaProjectWithCatalog()
+        def simpledsl = project.extensions.getByType(SimpleDslJavaExtension)
+        simpledsl.javaLibrary()
 
         def error = assertThrows(SimpleDslConfigurationException) {
-            project.extensions.getByType(SimpleDslExtension).nativeImage()
+            simpledsl.nativeImage()
         }
 
         assertTrue(error.message.contains('SimpleDSL configuration error'))
         assertTrue(error.message.contains("capability 'native' is not supported"))
     }
 
-    private static def projectWithCatalog() {
+    private static def javaProjectWithCatalog() {
         def project = ProjectBuilder.builder().build()
         def spring = { String alias, String module -> new CatalogLibrary(alias, module, null, 'spring') }
         def catalog = new DependencyCatalogSnapshot(
@@ -100,6 +100,7 @@ class FeaturePluginsTest {
                 ],
                 [:])
         project.extensions.add(DependencyCatalogSnapshot, 'simpledslDependencyCatalog', catalog)
+        project.pluginManager.apply(SimpleDslJavaPlugin)
         project
     }
 }
