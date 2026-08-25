@@ -16,4 +16,10 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "simpledsl"
-include("simpledsl-core", "simpledsl-java", "simpledsl-android", "integration-tests-java")
+include(
+    "simpledsl-core",
+    "simpledsl-java",
+    "simpledsl-android",
+    "integration-tests-java",
+    "integration-tests-android"
+)
