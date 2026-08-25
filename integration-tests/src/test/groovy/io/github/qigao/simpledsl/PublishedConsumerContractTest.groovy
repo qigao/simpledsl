@@ -108,29 +108,31 @@ class PublishedConsumerContractTest {
         List<String> arguments = new ArrayList<>(Arrays.asList(tasks))
         arguments.add('--configuration-cache')
         arguments.add("-PsimpledslTestRepo=${requiredProperty('simpledsl.test.repo')}".toString())
-        arguments.add("-PsimpledslVersion=${requiredProperty('simpledsl.test.version')}".toString())
         arguments.add('--stacktrace')
         arguments
     }
 
     private File copyFixture(String name) {
-        Path fixtureRoot = Path.of(requiredProperty('simpledsl.fixture.dir'))
-        Path source = fixtureRoot
-        Path target = temporaryDirectory.resolve(name)
-        copyRecursively(source, target)
-        target.toFile()
+        File source = new File(requiredProperty('simpledsl.fixture.dir'))
+        File target = temporaryDirectory.resolve(name).toFile()
+        copyDirectory(source.toPath(), target.toPath())
+        File settings = new File(target, 'settings.gradle')
+        settings.text = settings.text.replace(
+                '@SIMPLEDSL_VERSION@',
+                requiredProperty('simpledsl.test.version'))
+        target
     }
 
-    private static void copyRecursively(Path source, Path target) {
+    private static void copyDirectory(Path source, Path target) {
         Files.walk(source).withCloseable { paths ->
-            paths.forEach { current ->
-                Path relative = source.relativize(current)
+            paths.forEach { Path path ->
+                Path relative = source.relativize(path)
                 Path destination = target.resolve(relative)
-                if (Files.isDirectory(current)) {
+                if (Files.isDirectory(path)) {
                     Files.createDirectories(destination)
                 } else {
                     Files.createDirectories(destination.parent)
-                    Files.copy(current, destination, StandardCopyOption.REPLACE_EXISTING)
+                    Files.copy(path, destination, StandardCopyOption.REPLACE_EXISTING)
                 }
             }
         }
@@ -138,8 +140,8 @@ class PublishedConsumerContractTest {
 
     private static String requiredProperty(String name) {
         String value = System.getProperty(name)
-        if (value == null || value.isBlank()) {
-            throw new IllegalStateException("Missing system property ${name}")
+        if (!value) {
+            throw new IllegalStateException("Missing test system property: ${name}")
         }
         value
     }
