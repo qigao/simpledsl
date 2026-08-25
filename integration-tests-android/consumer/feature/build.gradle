@@ -1,0 +1,9 @@
+plugins {
+    id 'io.github.qigao.simpledsl.android'
+}
+
+simpledsl {
+    androidLibrary {
+        namespace = 'example.feature'
+    }
+}
