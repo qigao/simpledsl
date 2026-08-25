@@ -1,6 +1,9 @@
 package io.github.qigao.simpledsl.gradle.android
 
+import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
+import org.gradle.testkit.runner.UnexpectedBuildFailure
+import org.gradle.testkit.runner.UnexpectedBuildSuccess
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
@@ -36,9 +39,9 @@ assert androidDsl.compileOptions.sourceCompatibility == JavaVersion.VERSION_21
 assert androidDsl.compileOptions.targetCompatibility == JavaVersion.VERSION_21
 ''')
 
-        def result = runner(':app:help').build()
+        BuildResult result = build(':app:help')
 
-        assertTrue(result.output.contains('BUILD SUCCESSFUL'))
+        assertOutputContains(result, 'BUILD SUCCESSFUL')
     }
 
     @Test
@@ -62,9 +65,9 @@ assert androidDsl.compileOptions.sourceCompatibility == JavaVersion.VERSION_21
 assert androidDsl.compileOptions.targetCompatibility == JavaVersion.VERSION_21
 ''')
 
-        def result = runner(':feature:help').build()
+        BuildResult result = build(':feature:help')
 
-        assertTrue(result.output.contains('BUILD SUCCESSFUL'))
+        assertOutputContains(result, 'BUILD SUCCESSFUL')
     }
 
     @Test
@@ -79,10 +82,10 @@ simpledsl {
 }
 ''')
 
-        def result = runner(':app:help').buildAndFail()
+        BuildResult result = buildAndFail(':app:help')
 
-        assertTrue(result.output.contains('simpledsl.android.target-sdk'))
-        assertTrue(result.output.contains('Project: :app'))
+        assertOutputContains(result, 'simpledsl.android.target-sdk')
+        assertOutputContains(result, 'Project: :app')
     }
 
     @Test
@@ -95,11 +98,11 @@ simpledsl {
 }
 ''')
 
-        def result = runner(':feature:help').buildAndFail()
+        BuildResult result = buildAndFail(':feature:help')
 
-        assertTrue(result.output.contains('SimpleDSL Android configuration error'))
-        assertTrue(result.output.contains('namespace is required'))
-        assertTrue(result.output.contains('Project: :feature'))
+        assertOutputContains(result, 'SimpleDSL Android configuration error')
+        assertOutputContains(result, 'namespace is required')
+        assertOutputContains(result, 'Project: :feature')
     }
 
     private static String androidBuildPrelude(Integer targetSdk) {
@@ -144,11 +147,32 @@ include '${moduleName}'
         Files.writeString(manifest, '<manifest />\n')
     }
 
+    private BuildResult build(String... arguments) {
+        try {
+            return runner(arguments).build()
+        } catch (UnexpectedBuildFailure error) {
+            throw new AssertionError("Nested Android build failed:\n${error.buildResult.output}", error)
+        }
+    }
+
+    private BuildResult buildAndFail(String... arguments) {
+        try {
+            return runner(arguments).buildAndFail()
+        } catch (UnexpectedBuildSuccess error) {
+            throw new AssertionError("Nested Android build unexpectedly succeeded:\n${error.buildResult.output}", error)
+        }
+    }
+
+    private static void assertOutputContains(BuildResult result, String expected) {
+        assertTrue(
+                result.output.contains(expected),
+                "Expected nested Android build output to contain '${expected}'.\nOutput:\n${result.output}")
+    }
+
     private GradleRunner runner(String... arguments) {
         GradleRunner.create()
                 .withProjectDir(projectDir.toFile())
                 .withArguments((arguments as List<String>) + ['--stacktrace'])
                 .withPluginClasspath()
-                .forwardOutput()
     }
 }
