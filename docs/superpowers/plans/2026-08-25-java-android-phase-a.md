@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Extract backend-neutral SimpleDSL project infrastructure into `simpledsl-core`, migrate the existing Java/Spring product surface into `simpledsl-java`, and introduce snapshot schema v2 without implementing Android yet.
+**Goal:** Extract backend-neutral infrastructure into `simpledsl-core`, migrate the existing Java/Spring product into `simpledsl-java`, and introduce snapshot schema v2 while keeping Android implementation completely out of Phase A.
 
-**Architecture:** Phase A keeps one settings-side manifest service and one backend-neutral project core. The core owns manifest/discovery, snapshot/catalog bridging, dependency binding, capability primitives, common model/diagnostics, and backend claiming; the Java artifact owns Java/Spring module types, capabilities, schema helpers, and Java-side third-party tooling. Java consumers migrate from `io.github.qigao.simpledsl.build` to `io.github.qigao.simpledsl.java`; the removed ID fails with a migration diagnostic.
+**Architecture:** The settings plugin and all backend-neutral project infrastructure live in `simpledsl-core`. The Java/Spring backend lives in `simpledsl-java`, depends on core, registers only Java/Spring module types and capabilities, and publishes `io.github.qigao.simpledsl.java`. The removed `io.github.qigao.simpledsl.build` ID is rejected by settings with a migration diagnostic.
 
 **Tech Stack:** Gradle 9.1, Java 21 plugin runtime, Groovy, Kotlin Gradle build scripts, Tomlj, SnakeYAML Engine, JUnit 5, Gradle TestKit, Gradle Plugin Publish plugin.
 
@@ -12,23 +12,19 @@
 
 ## Global Constraints
 
-- This plan implements only Phase A from issue #10; no AGP classes or Android implementation dependencies may be introduced.
-- Public project plugin migration is `io.github.qigao.simpledsl.build` -> `io.github.qigao.simpledsl.java`.
-- `io.github.qigao.simpledsl.settings` remains the single public settings plugin.
-- The old `.build` marker is removed, not retained as a compatibility plugin.
-- `simpledsl.java` remains valid manifest syntax but becomes optional during settings evaluation and required only when the Java backend is applied.
-- Internal dependency snapshot schema becomes exactly version `2`.
-- `platforms`, `libraries`, and `plugins` retain their 0.2.0 snapshot semantics.
-- Core must have no implementation dependency on Spring Boot, GraalVM Native Build Tools, jOOQ, jsonschema2pojo, or AGP.
-- Java must depend on core; core must not depend on Java.
-- Configuration-cache and real published-consumer verification remain release gates.
-- Keep Java runtime/toolchain baseline at Java 21 and repository Gradle baseline at 9.1.
+- Phase A implements issue #10 only; no AGP class, AGP dependency, Android DSL, or Android marker may be added.
+- Public settings plugin remains `io.github.qigao.simpledsl.settings`.
+- Public Java backend becomes `io.github.qigao.simpledsl.java`.
+- `io.github.qigao.simpledsl.build` is removed as a marker and retained only as a migration-diagnostic/test string.
+- `simpledsl.java` remains valid syntax, becomes optional during settings evaluation, and is required only by the Java backend.
+- Internal dependency snapshot schema becomes exactly `2`.
+- Internal `platforms`, `libraries`, and `plugins` keep 0.2.0 semantics.
+- `simpledsl-core` must have no implementation dependency on Spring Boot, GraalVM, jOOQ, jsonschema2pojo, or AGP.
+- `simpledsl-java` depends on `simpledsl-core`; core never depends on Java.
+- Java plugin runtime remains Java 21; repository Gradle baseline remains 9.1.
+- Real published-consumer and configuration-cache verification remain merge gates.
 
----
-
-## File Structure Map
-
-After Phase A the relevant repository shape is:
+## Target File Structure
 
 ```text
 simpledsl-core/
@@ -43,19 +39,17 @@ simpledsl-core/
     diagnostics/
     model/
     core/
-  src/test/groovy/io/github/qigao/simpledsl/gradle/...
 
 simpledsl-java/
   build.gradle.kts
   src/main/groovy/io/github/qigao/simpledsl/gradle/java/
     SimpleDslJavaPlugin.groovy
     SimpleDslJavaExtension.groovy
+    JavaBuiltinCapabilities.groovy
     internal/
     module/
-    capability/
     feature/
     schema/
-  src/test/groovy/io/github/qigao/simpledsl/gradle/java/...
 
 integration-tests-java/
   build.gradle.kts
@@ -63,11 +57,9 @@ integration-tests-java/
   src/test/groovy/io/github/qigao/simpledsl/PublishedJavaConsumerContractTest.groovy
 ```
 
-`simpledsl-core` is the implementation artifact for `io.github.qigao.simpledsl.settings` and also contains internal project-side common classes. It does not publish a second project-side marker.
-
 ---
 
-### Task 1: Make Java Policy Optional and Introduce Snapshot Schema v2
+### Task 1: Snapshot v2 and Optional Java Policy
 
 **Files:**
 - Modify: `simpledsl-build-bootstrap/src/test/groovy/io/github/qigao/simpledsl/gradle/manifest/DependencyManifestLoaderTest.groovy`
@@ -78,135 +70,90 @@ integration-tests-java/
 - Modify: `simpledsl-build-bootstrap/src/main/groovy/io/github/qigao/simpledsl/gradle/settings/SimpleDslSettingsPlugin.groovy`
 - Modify: `simpledsl-build-bootstrap/src/main/groovy/io/github/qigao/simpledsl/gradle/settings/SimpleDslDependenciesTask.groovy`
 
-**Interfaces:**
-- Produces: `DependencyRegistry.javaVersionOrNull(): Integer`
-- Produces snapshot shape:
-  ```groovy
-  [
-      schemaVersion: 2,
-      policies: javaVersion == null ? [:] : [java: [toolchain: javaVersion]],
-      platforms: ...,
-      libraries: ...,
-      plugins: ...
-  ]
-  ```
-- Settings evaluation no longer calls a method that requires Java policy to exist.
+**Produces:**
 
-- [ ] **Step 1: Write failing manifest tests for schema v2 and optional Java policy**
+```groovy
+Integer DependencyRegistry.javaVersionOrNull()
+Map<String, Object> DependencyRegistry.snapshot()
+```
 
-Add tests equivalent to:
+with exact snapshot shape:
+
+```groovy
+[
+    schemaVersion: 2,
+    policies: javaVersion == null ? [:] : [java: [toolchain: javaVersion]],
+    platforms: ...,
+    libraries: ...,
+    plugins: ...
+]
+```
+
+- [ ] **Step 1: Write failing manifest tests**
+
+Add:
 
 ```groovy
 @Test
-void 'manifest without simpledsl java is valid and exports no java policy'() {
+void 'dependency-only manifest exports no java policy'() {
     File manifest = write('dependencies.toml', '''
 [versions]
 junit = "6.0.1"
-
 [libraries.junit]
 module = "org.junit.jupiter:junit-jupiter"
 version.ref = "junit"
 ''')
-
     DependencyRegistry registry = DependencyManifestLoader.load(manifest)
     assertNull(registry.javaVersionOrNull())
-
-    Map snapshot = registry.snapshot()
-    assertEquals(2, snapshot.schemaVersion)
-    assertEquals([:], snapshot.policies)
+    assertEquals(2, registry.snapshot().schemaVersion)
+    assertEquals([:], registry.snapshot().policies)
 }
 
 @Test
-void 'simpledsl java is exported as java toolchain policy in schema v2'() {
+void 'java policy is exported under policies java toolchain'() {
     File manifest = write('dependencies.toml', '''
 [simpledsl]
 java = 25
 ''')
-
     Map snapshot = DependencyManifestLoader.load(manifest).snapshot()
-    assertEquals(2, snapshot.schemaVersion)
     assertEquals([java: [toolchain: 25]], snapshot.policies)
+    assertFalse(snapshot.containsKey('javaVersion'))
 }
 ```
 
-Update existing snapshot assertions so they no longer expect top-level `javaVersion`.
-
-- [ ] **Step 2: Run the focused manifest test and verify RED**
-
-Run:
+- [ ] **Step 2: Verify RED**
 
 ```bash
 ./gradlew :simpledsl-build-bootstrap:test --tests '*DependencyManifestLoaderTest' --no-build-cache --stacktrace
 ```
 
-Expected: FAIL because the loader still rejects missing `simpledsl.java` and the registry still exports schema v1/top-level `javaVersion`.
+Expected: FAIL because missing `simpledsl.java` is currently rejected and schema v1 is exported.
 
-- [ ] **Step 3: Implement optional Java policy and schema v2**
+- [ ] **Step 3: Implement schema v2**
 
-Change the loader so this block is removed:
+Remove the loader-level `missing simpledsl.java` failure. Preserve duplicate/type validation when `simpledsl.java` is present. Add `javaVersionOrNull()` and export `policies.java.toolchain` only when configured.
 
-```groovy
-if (state.javaVersion == null) {
-    fail(rootManifest, null, null, 'missing simpledsl.java')
-}
-```
+- [ ] **Step 4: Remove settings-time Java requirement**
 
-Keep duplicate/type validation when `[simpledsl].java` is present.
-
-In `DependencyRegistry`, replace required Java access with:
-
-```groovy
-Integer javaVersionOrNull() {
-    javaVersion
-}
-
-Map<String, Object> snapshot() {
-    Map<String, Object> policies = new LinkedHashMap<>()
-    if (javaVersion != null) {
-        policies.put('java', [toolchain: javaVersion])
-    }
-    [
-        schemaVersion: 2,
-        policies: policies,
-        platforms: snapshotPlatforms(),
-        libraries: snapshotLibraries(),
-        plugins: snapshotPlugins()
-    ]
-}
-```
-
-Do not introduce an Android policy node in Phase A.
-
-- [ ] **Step 4: Make settings diagnostics tolerate absent Java policy**
-
-Remove the eager settings-time requirement:
-
-```groovy
-serviceProvider.get().javaVersion()
-```
-
-Update `SimpleDslDependenciesTask` from a required integer input to an optional textual diagnostic, for example:
+Delete the eager `serviceProvider.get().javaVersion()` call. Change `SimpleDslDependenciesTask` to:
 
 ```groovy
 @Input
 abstract Property<String> getJavaPolicy()
 ```
 
-and configure it from snapshot v2:
+and set it with:
 
 ```groovy
-Map javaPolicy = (snapshot.policies as Map).get('java') as Map
-String javaLine = javaPolicy == null ? 'not configured' : javaPolicy.toolchain.toString()
-task.javaPolicy.set(javaLine)
+Map javaPolicy = ((snapshot.policies ?: [:]) as Map).get('java') as Map
+javaPolicy == null ? 'not configured' : javaPolicy.toolchain.toString()
 ```
 
-- [ ] **Step 5: Add settings TestKit coverage for dependency-only manifests**
+- [ ] **Step 5: Add settings TestKit case for manifest without Java policy**
 
-Add a TestKit case that applies `io.github.qigao.simpledsl.settings` with a root manifest containing only `[versions]`/`[libraries]` and verifies `help` or `simpledslDependencies` succeeds.
+Apply `io.github.qigao.simpledsl.settings` to a fixture whose root manifest contains only versions/libraries and assert `simpledslDependencies` succeeds and reports Java policy as `not configured`.
 
-- [ ] **Step 6: Run bootstrap tests and verify GREEN**
-
-Run:
+- [ ] **Step 6: Verify GREEN**
 
 ```bash
 ./gradlew :simpledsl-build-bootstrap:check --no-build-cache --stacktrace
@@ -223,168 +170,104 @@ git commit -m "feat: introduce dependency snapshot v2"
 
 ---
 
-### Task 2: Extract Backend-Neutral Project Core from Build Logic
+### Task 2: Extract the Backend-Neutral Project Core
 
 **Files:**
-- Move from `simpledsl-build-logic/src/main/groovy/io/github/qigao/simpledsl/gradle/catalog/` to `simpledsl-build-bootstrap/src/main/groovy/io/github/qigao/simpledsl/gradle/catalog/`
-- Move from `simpledsl-build-logic/src/main/groovy/io/github/qigao/simpledsl/gradle/dependency/` to `simpledsl-build-bootstrap/src/main/groovy/io/github/qigao/simpledsl/gradle/dependency/`
-- Move backend-neutral files from `simpledsl-build-logic/src/main/groovy/io/github/qigao/simpledsl/gradle/capability/` to bootstrap
-- Move backend-neutral diagnostics/model files to bootstrap
+- Move `catalog/`, `dependency/`, backend-neutral capability classes, common diagnostics, and model classes from `simpledsl-build-logic` into `simpledsl-build-bootstrap`
 - Create: `simpledsl-build-bootstrap/src/main/groovy/io/github/qigao/simpledsl/gradle/core/SimpleDslProjectCorePlugin.groovy`
 - Create: `simpledsl-build-bootstrap/src/main/groovy/io/github/qigao/simpledsl/gradle/core/SimpleDslBackendGuard.groovy`
-- Create: `simpledsl-build-bootstrap/src/main/groovy/io/github/qigao/simpledsl/gradle/model/SimpleDslModuleModel.groovy`
+- Replace: `simpledsl-build-logic/src/main/groovy/io/github/qigao/simpledsl/gradle/ModuleKind.groovy`
 - Modify: `simpledsl-build-logic/build.gradle.kts`
-- Move/adapt tests from build logic to bootstrap for the moved classes
+- Move matching unit tests into bootstrap
 
-**Interfaces:**
-- Produces `SimpleDslModuleModel` properties:
-  ```groovy
-  abstract Property<String> getBackendId()
-  abstract Property<String> getModuleType()
-  abstract SetProperty<String> getCapabilities()
-  abstract SetProperty<String> getPlatformBindings()
-  ```
-- Produces `SimpleDslBackendGuard.claim(Project project, String backendId)`.
-- Produces internal `SimpleDslProjectCorePlugin` which registers catalog/model/capability/diagnostic infrastructure but does **not** create the public `simpledsl` extension.
-- `CapabilitySpec.allowedModules` becomes `Set<String>`.
+**Produces:**
 
-- [ ] **Step 1: Write RED tests for backend-neutral module IDs and backend claiming**
+```groovy
+abstract class SimpleDslModuleModel {
+    abstract Property<String> getBackendId()
+    abstract Property<String> getModuleType()
+    abstract SetProperty<String> getCapabilities()
+    abstract SetProperty<String> getPlatformBindings()
+}
 
-Create tests in bootstrap such as:
+static void SimpleDslBackendGuard.claim(Project project, String backendId)
+```
+
+`CapabilitySpec.allowedModules` becomes `Set<String>` and builder API becomes `allow(String... moduleTypes)`.
+
+- [ ] **Step 1: Write RED tests**
 
 ```groovy
 @Test
-void 'capability allows string module ids'() {
-    CapabilitySpec spec = CapabilitySpec.builder('web')
-            .allow('spring-service')
-            .build()
+void 'capability accepts string module ids'() {
+    CapabilitySpec spec = CapabilitySpec.builder('web').allow('spring-service').build()
     assertEquals(['spring-service'] as Set, spec.allowedModules)
 }
 
 @Test
-void 'backend guard rejects second different backend'() {
+void 'backend guard rejects a second backend'() {
     Project project = ProjectBuilder.builder().withName('app').build()
     SimpleDslBackendGuard.claim(project, 'java')
-
     GradleException error = assertThrows(GradleException) {
         SimpleDslBackendGuard.claim(project, 'android')
     }
-    assertTrue(error.message.contains("already-selected backend: java"))
-    assertTrue(error.message.contains("requested backend: android"))
+    assertTrue(error.message.contains('Already-selected backend: java'))
+    assertTrue(error.message.contains('Requested backend: android'))
 }
 ```
 
-- [ ] **Step 2: Run focused bootstrap tests and verify RED**
-
-Run:
+- [ ] **Step 2: Verify RED**
 
 ```bash
 ./gradlew :simpledsl-build-bootstrap:test --tests '*Capability*' --tests '*BackendGuard*' --no-build-cache --stacktrace
 ```
 
-Expected: compile/test failure because the string-based interfaces and guard do not exist.
+Expected: compile/test failure because these interfaces do not exist in bootstrap.
 
-- [ ] **Step 3: Refactor `CapabilitySpec` to string module IDs**
+- [ ] **Step 3: Implement string-based model and backend guard**
 
-Replace:
+Guard behavior is idempotent for the same backend and throws for a different backend. Error includes project path, selected backend, and requested backend.
 
-```groovy
-Set<ModuleKind> allowedModules
-Builder allow(ModuleKind... kinds)
-```
+- [ ] **Step 4: Move snapshot/catalog/dependency bridge and require schema 2**
 
-with:
+Set:
 
 ```groovy
-Set<String> allowedModules
-Builder allow(String... moduleTypes) {
-    allowedModules.addAll(Arrays.asList(moduleTypes))
-    this
-}
+static final int EXPECTED_SCHEMA_VERSION = 2
 ```
 
-Preserve sorting/immutability behavior.
-
-- [ ] **Step 4: Replace `ModuleKind` with backend-neutral model properties**
-
-Create the model with Gradle managed properties and conventions initialized by the core plugin:
-
-```groovy
-model.capabilities.convention(Collections.emptySet())
-model.platformBindings.convention(Collections.emptySet())
-```
-
-`backendId` and `moduleType` remain unset until a backend/module claims them.
-
-- [ ] **Step 5: Implement backend guard**
-
-Use an extra-property/internal extension value owned per `Project`. The behavior must be idempotent for the same backend and fail for a different one:
-
-```groovy
-static void claim(Project project, String requested) {
-    def extra = project.extensions.extraProperties
-    String key = 'io.github.qigao.simpledsl.backend'
-    String selected = extra.has(key) ? extra.get(key) as String : null
-    if (selected == null) {
-        extra.set(key, requested)
-        return
-    }
-    if (selected != requested) {
-        throw new GradleException(
-            "SimpleDSL backend conflict\n" +
-            "Project: ${project.path}\n" +
-            "Already-selected backend: ${selected}\n" +
-            "Requested backend: ${requested}")
-    }
-}
-```
-
-- [ ] **Step 6: Move the catalog/snapshot bridge and adapt it to schema v2**
-
-`SimpleDslRegistryBridge.EXPECTED_SCHEMA_VERSION` becomes `2`. Parse:
-
-```groovy
-Map policies = table(raw, 'policies')
-Map javaPolicy = optionalEntry(policies.get('java'), "policy 'java'")
-Integer javaToolchain = javaPolicy == null ? null : requiredInteger(javaPolicy, 'toolchain', "policy 'java'")
-```
-
-`DependencyCatalogSnapshot` stores optional Java policy instead of a required Java integer and exposes:
+`DependencyCatalogSnapshot` stores nullable Java toolchain and exposes:
 
 ```groovy
 Integer javaToolchainOrNull()
 int requireJavaToolchain(String projectPath)
 ```
 
-`requireJavaToolchain` throws a targeted configuration error mentioning the project path and `simpledsl.java`.
+`requireJavaToolchain` throws a `SimpleDSL configuration error` containing the project path and `simpledsl.java` when absent.
 
-- [ ] **Step 7: Implement `SimpleDslProjectCorePlugin`**
+- [ ] **Step 5: Implement internal `SimpleDslProjectCorePlugin`**
 
-It applies `SimpleDslCatalogPlugin`, creates the model, registers empty capability registries/engine, and common tasks. It must not call `BuiltinCapabilities.registerAll(...)` and must not create a `simpledsl` extension.
+It registers catalog/model/capability registries/engine/common diagnostics. It must not register built-in product capabilities and must not create the public `simpledsl` extension.
 
-Common diagnostic task fields become string-based `backendId`/`moduleType`; Java-specific toolchain text is optional.
+- [ ] **Step 6: Make existing build logic consume bootstrap core**
 
-- [ ] **Step 8: Make build logic depend on bootstrap/core classes temporarily**
-
-In `simpledsl-build-logic/build.gradle.kts` add:
+Add temporarily:
 
 ```kotlin
 implementation(project(":simpledsl-build-bootstrap"))
 ```
 
-Remove duplicated source files after their imports compile from bootstrap.
+Remove duplicate source copies after imports compile from bootstrap.
 
-- [ ] **Step 9: Run both module test suites**
-
-Run:
+- [ ] **Step 7: Verify GREEN**
 
 ```bash
 ./gradlew :simpledsl-build-bootstrap:check :simpledsl-build-logic:check --no-build-cache --stacktrace
 ```
 
-Expected: PASS after adapting existing validators/tests from enum module kinds to string IDs.
+Expected: PASS.
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
 git add simpledsl-build-bootstrap simpledsl-build-logic
@@ -393,78 +276,67 @@ git commit -m "refactor: extract backend-neutral project core"
 
 ---
 
-### Task 3: Create the Java Backend Entry Point and Java-Only Extension
+### Task 3: Create the Independent Java Backend
 
 **Files:**
 - Create: `simpledsl-build-logic/src/main/groovy/io/github/qigao/simpledsl/gradle/java/SimpleDslJavaPlugin.groovy`
 - Create: `simpledsl-build-logic/src/main/groovy/io/github/qigao/simpledsl/gradle/java/SimpleDslJavaExtension.groovy`
-- Move/adapt: existing Java/Spring module, feature, internal, and schema classes under the Java package/module ownership
-- Modify: `simpledsl-build-logic/src/main/groovy/io/github/qigao/simpledsl/gradle/capability/BuiltinCapabilities.groovy` (or replace with Java-owned registry class)
-- Modify: Java module tests
+- Create: `simpledsl-build-logic/src/main/groovy/io/github/qigao/simpledsl/gradle/java/JavaBuiltinCapabilities.groovy`
+- Move Java/Spring `internal/`, `module/`, `feature/`, and `schema/` classes under Java backend ownership
 - Modify: `simpledsl-build-logic/build.gradle.kts`
+- Modify matching Java/Spring tests
 
-**Interfaces:**
-- Public plugin implementation class: `io.github.qigao.simpledsl.gradle.java.SimpleDslJavaPlugin`.
-- Java backend claims backend ID `java`.
-- Java module IDs are exactly `java-library`, `spring-library`, `spring-service`.
-- Java extension preserves methods `javaLibrary()`, `springLibrary()`, `springService()`, `jooqSchema()`, `jsonSchema()`, Java/Spring capabilities, and explicit dependency helpers.
+**Produces:** public implementation class `io.github.qigao.simpledsl.gradle.java.SimpleDslJavaPlugin` and exact module IDs `java-library`, `spring-library`, `spring-service`.
 
-- [ ] **Step 1: Write RED tests for Java backend claim and extension isolation**
+- [ ] **Step 1: Write RED Java backend tests**
 
-Add tests that apply `SimpleDslJavaPlugin` via `ProjectBuilder` and assert:
+Assert applying `SimpleDslJavaPlugin` produces:
 
 ```groovy
 assertEquals('java', model.backendId.get())
-assertNotNull(project.extensions.findByName('simpledsl'))
 assertTrue(project.extensions.getByName('simpledsl') instanceof SimpleDslJavaExtension)
+assertFalse(SimpleDslJavaExtension.methods*.name.contains('androidApplication'))
+assertFalse(SimpleDslJavaExtension.methods*.name.contains('androidLibrary'))
 ```
 
-Also assert the Java extension class has no methods named `androidApplication` or `androidLibrary`.
-
-- [ ] **Step 2: Run Java tests and verify RED**
-
-Run:
+- [ ] **Step 2: Verify RED**
 
 ```bash
 ./gradlew :simpledsl-build-logic:test --tests '*Java*' --no-build-cache --stacktrace
 ```
 
-Expected: FAIL because the Java-specific public entry point/extension does not exist.
+Expected: FAIL because Java entry/extension classes do not exist.
 
-- [ ] **Step 3: Implement Java plugin bootstrap**
-
-The plugin order is:
+- [ ] **Step 3: Implement Java plugin entry**
 
 ```groovy
 void apply(Project project) {
     SimpleDslBackendGuard.claim(project, 'java')
     project.pluginManager.apply(SimpleDslProjectCorePlugin)
-    registerJavaCapabilities(project)
+    JavaBuiltinCapabilities.registerAll(project.extensions.getByType(CapabilityRegistry))
     project.extensions.create('simpledsl', SimpleDslJavaExtension, project,
             project.extensions.getByType(SimpleDslModuleModel))
 }
 ```
 
-Register Java/Spring capabilities only from this backend.
+- [ ] **Step 4: Migrate Java/Spring module plugins to string IDs**
 
-- [ ] **Step 4: Make Java module plugins use string module IDs and required Java policy**
-
-Each module plugin must fail if a different module type is already selected and set one of the exact IDs. Java base setup reads:
+Each module plugin sets exactly one module type. Java base reads:
 
 ```groovy
 int javaVersion = project.extensions.getByType(DependencyCatalogSnapshot)
         .requireJavaToolchain(project.path)
 ```
 
-and configures the existing Java toolchain/release behavior unchanged.
+and keeps current Java toolchain/release behavior.
 
-- [ ] **Step 5: Keep Java/Spring behavior tests green**
+- [ ] **Step 5: Preserve Java extension surface**
 
-Adapt existing `ModuleTypePluginsTest`, `FeaturePluginsTest`, `SchemaPluginConfigurationTest`, and doctor tests to the new Java extension/model IDs without weakening assertions.
+`SimpleDslJavaExtension` keeps `library`, `dependency`, `capability`, `javaLibrary`, `springLibrary`, `springService`, `jooqSchema`, `jsonSchema`, persistence APIs, and existing Java/Spring capability methods.
 
-- [ ] **Step 6: Add the `.java` marker while `.build` still exists temporarily**
+- [ ] **Step 6: Register temporary `.java` marker**
 
-In `gradlePlugin.plugins` create:
+Add:
 
 ```kotlin
 create("simpleDslJava") {
@@ -473,25 +345,19 @@ create("simpleDslJava") {
     displayName = "SimpleDSL Java"
     description = "SimpleDSL Java and Spring build backend"
     tags = listOf("build-platform", "java", "spring")
-    compatibility {
-        features {
-            configurationCache = true
-        }
-    }
+    compatibility { features { configurationCache = true } }
 }
 ```
 
-Do not remove `.build` until settings resolution and the published consumer are migrated in later tasks.
+Keep `.build` only until Task 4 migrates settings resolution.
 
-- [ ] **Step 7: Run build-logic checks**
-
-Run:
+- [ ] **Step 7: Verify GREEN**
 
 ```bash
 ./gradlew :simpledsl-build-logic:check --no-build-cache --stacktrace
 ```
 
-Expected: PASS.
+Expected: PASS, including existing module/feature/schema tests.
 
 - [ ] **Step 8: Commit**
 
@@ -502,7 +368,7 @@ git commit -m "feat: add independent Java backend"
 
 ---
 
-### Task 4: Teach Settings Resolution About the Java Backend and Retire `.build`
+### Task 4: Migrate Plugin Resolution and Remove `.build`
 
 **Files:**
 - Modify: `simpledsl-build-bootstrap/src/main/groovy/io/github/qigao/simpledsl/gradle/distribution/SimpleDslDistribution.groovy`
@@ -510,22 +376,25 @@ git commit -m "feat: add independent Java backend"
 - Modify: `simpledsl-build-bootstrap/src/test/groovy/io/github/qigao/simpledsl/gradle/settings/SimpleDslSettingsPluginTest.groovy`
 - Modify: `simpledsl-build-logic/build.gradle.kts`
 
-**Interfaces:**
-- `JAVA_PLUGIN_ID = 'io.github.qigao.simpledsl.java'`.
-- `JAVA_ARTIFACT = 'simpledsl-java'` after Task 5 rename; until then the coordinate helper may still point at `simpledsl-build-logic` and is renamed atomically with Task 5.
-- Removed ID `io.github.qigao.simpledsl.build` must fail with migration guidance.
+**Produces:**
 
-- [ ] **Step 1: Write RED settings tests for `.java`, version conflicts, and old-ID migration error**
-
-Add TestKit cases that prove:
-
-```text
-io.github.qigao.simpledsl.java without version -> managed SimpleDSL version
-io.github.qigao.simpledsl.java with conflicting explicit version -> SimpleDSL version conflict
-io.github.qigao.simpledsl.build -> explicit migration error mentioning io.github.qigao.simpledsl.java
+```groovy
+SETTINGS_PLUGIN_ID = 'io.github.qigao.simpledsl.settings'
+JAVA_PLUGIN_ID = 'io.github.qigao.simpledsl.java'
+REMOVED_BUILD_PLUGIN_ID = 'io.github.qigao.simpledsl.build'
 ```
 
-The old-ID error should contain:
+- [ ] **Step 1: Write RED TestKit cases**
+
+Prove:
+
+```text
+.java without version -> managed SimpleDSL version
+.java with conflicting version -> SimpleDSL version conflict
+.build -> migration diagnostic
+```
+
+Old-ID diagnostic must contain:
 
 ```text
 SimpleDSL plugin migration required
@@ -533,50 +402,23 @@ Plugin: io.github.qigao.simpledsl.build
 Replacement: io.github.qigao.simpledsl.java
 ```
 
-- [ ] **Step 2: Run focused settings tests and verify RED**
-
-Run:
+- [ ] **Step 2: Verify RED**
 
 ```bash
 ./gradlew :simpledsl-build-bootstrap:test --tests '*SimpleDslSettingsPluginTest' --no-build-cache --stacktrace
 ```
 
-Expected: FAIL because the resolution strategy only knows `BUILD_PLUGIN_ID`.
+Expected: FAIL because settings still resolves `BUILD_PLUGIN_ID`.
 
-- [ ] **Step 3: Replace build-plugin distribution constants with Java-backend constants**
+- [ ] **Step 3: Implement `.java` resolution and old-ID rejection**
 
-Define:
+Handle `REMOVED_BUILD_PLUGIN_ID` before generic manifest-managed plugins. Resolve `.java` to the same SimpleDSL release version as settings; reject a conflicting explicit version.
 
-```groovy
-static final String SETTINGS_PLUGIN_ID = 'io.github.qigao.simpledsl.settings'
-static final String JAVA_PLUGIN_ID = 'io.github.qigao.simpledsl.java'
-static final String REMOVED_BUILD_PLUGIN_ID = 'io.github.qigao.simpledsl.build'
-```
+- [ ] **Step 4: Remove `.build` publication marker**
 
-and a Java coordinate helper.
+Delete the old `simpleDslBuild` `gradlePlugin` registration after settings migration tests pass.
 
-- [ ] **Step 4: Update settings resolution strategy**
-
-Handle the removed ID before generic manifest plugins:
-
-```groovy
-if (pluginId == SimpleDslDistribution.REMOVED_BUILD_PLUGIN_ID) {
-    throw new GradleException(
-        'SimpleDSL plugin migration required\n' +
-        "Plugin: ${pluginId}\n" +
-        "Replacement: ${SimpleDslDistribution.JAVA_PLUGIN_ID}")
-}
-```
-
-Handle `.java` using the exact settings-plugin release version and reject an explicitly conflicting version.
-
-- [ ] **Step 5: Remove the old `.build` marker from Gradle plugin publication**
-
-Delete the old `simpleDslBuild` registration only after the settings tests above pass with the migration behavior.
-
-- [ ] **Step 6: Run bootstrap + build-logic checks**
-
-Run:
+- [ ] **Step 5: Verify GREEN**
 
 ```bash
 ./gradlew :simpledsl-build-bootstrap:check :simpledsl-build-logic:check --no-build-cache --stacktrace
@@ -584,7 +426,7 @@ Run:
 
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add simpledsl-build-bootstrap simpledsl-build-logic
@@ -593,65 +435,66 @@ git commit -m "feat: migrate project plugin to Java backend"
 
 ---
 
-### Task 5: Rename Implementation Projects to `simpledsl-core` and `simpledsl-java`
+### Task 5: Rename Artifacts and Java Integration Suite
 
 **Files:**
-- Rename directory: `simpledsl-build-bootstrap/` -> `simpledsl-core/`
-- Rename directory: `simpledsl-build-logic/` -> `simpledsl-java/`
+- Rename: `simpledsl-build-bootstrap/` -> `simpledsl-core/`
+- Rename: `simpledsl-build-logic/` -> `simpledsl-java/`
+- Rename: `integration-tests/` -> `integration-tests-java/`
+- Rename: `PublishedConsumerContractTest.groovy` -> `PublishedJavaConsumerContractTest.groovy`
 - Modify: `settings.gradle.kts`
 - Modify: `build.gradle.kts`
-- Modify: `simpledsl-core/build.gradle.kts`
 - Modify: `simpledsl-java/build.gradle.kts`
-- Modify: `simpledsl-core/src/main/groovy/io/github/qigao/simpledsl/gradle/distribution/SimpleDslDistribution.groovy`
-- Modify all Gradle task/project-path references in `.github/workflows/ci.yml`, `.github/workflows/release.yml`, tests, README, scripts
+- Modify: `simpledsl-core/.../SimpleDslDistribution.groovy`
+- Modify: consumer fixture plugin ID
 
-**Interfaces:**
-- Maven implementation artifacts become exactly:
-  ```text
-  io.github.qigao.simpledsl:simpledsl-core
-  io.github.qigao.simpledsl:simpledsl-java
-  ```
-- Project dependency becomes `implementation(project(":simpledsl-core"))`.
+**Produces Maven artifacts:**
 
-- [ ] **Step 1: Add a repository topology assertion before renaming**
+```text
+io.github.qigao.simpledsl:simpledsl-core
+io.github.qigao.simpledsl:simpledsl-java
+```
 
-In the published-consumer/metadata test area, add an assertion that the implementation publications expected after migration are exactly `simpledsl-core` and `simpledsl-java`. Run it before the rename and verify it fails against the old artifact names.
+- [ ] **Step 1: Make published marker expectation RED first**
 
-- [ ] **Step 2: Rename the two directories in one commit-sized operation**
+In the current `PublishedConsumerContractTest`, change expected marker IDs to:
 
-Use `git mv` so history remains visible:
+```groovy
+[
+    'io.github.qigao.simpledsl.java',
+    'io.github.qigao.simpledsl.settings'
+] as Set
+```
+
+and assert `.build` is absent. Run the integration test before fixture migration; expected FAIL because the current consumer still requests `.build`.
+
+- [ ] **Step 2: Rename directories using `git mv`**
 
 ```bash
 git mv simpledsl-build-bootstrap simpledsl-core
 git mv simpledsl-build-logic simpledsl-java
+git mv integration-tests integration-tests-java
+git mv integration-tests-java/src/test/groovy/io/github/qigao/simpledsl/PublishedConsumerContractTest.groovy \
+  integration-tests-java/src/test/groovy/io/github/qigao/simpledsl/PublishedJavaConsumerContractTest.groovy
 ```
 
-- [ ] **Step 3: Update root project inclusion and test-repository publication aggregation**
+- [ ] **Step 3: Update root projects and dependencies**
 
-`settings.gradle.kts` becomes:
+`settings.gradle.kts` must include exactly:
 
 ```kotlin
-include("simpledsl-core", "simpledsl-java", "integration-tests")
+include("simpledsl-core", "simpledsl-java", "integration-tests-java")
 ```
 
-At this task keep the integration test project name unchanged until Task 6.
-
-Root test publication aggregation must depend on:
-
-```kotlin
-":simpledsl-core:publishAllPublicationsToTestPluginRepository"
-":simpledsl-java:publishAllPublicationsToTestPluginRepository"
-```
-
-- [ ] **Step 4: Update Java project dependency and distribution coordinates**
-
-Set Java module dependency:
+Java backend uses:
 
 ```kotlin
 implementation(project(":simpledsl-core"))
 ```
 
-Set distribution helpers:
+Root `publishToTestPluginRepository` depends on core and Java publication tasks.
+
+- [ ] **Step 4: Update distribution artifact coordinates**
 
 ```groovy
 static final String CORE_ARTIFACT = 'simpledsl-core'
@@ -662,29 +505,38 @@ static String javaCoordinate() {
 }
 ```
 
-- [ ] **Step 5: Update CI/release task paths only for renamed projects**
+- [ ] **Step 5: Migrate real consumer**
 
-Do not add Android tasks. Replace old bootstrap/build-logic paths with core/java paths while preserving the same verification semantics.
+Change consumer project plugin to:
 
-- [ ] **Step 6: Run clean compilation and tests after the structural rename**
+```groovy
+plugins {
+    id 'io.github.qigao.simpledsl.java'
+}
+```
 
-Run:
+Preserve `springService()` / `web()` behavior and preserve both Test task cache inputs:
+
+```kotlin
+inputs.dir(consumerFixture)
+inputs.dir(testPluginRepository)
+```
+
+- [ ] **Step 6: Run clean structural verification**
 
 ```bash
-./gradlew clean :simpledsl-core:check :simpledsl-java:check publishToTestPluginRepository --no-build-cache --stacktrace
+./gradlew clean :simpledsl-core:check :simpledsl-java:check publishToTestPluginRepository :integration-tests-java:test --no-build-cache --stacktrace
 ```
 
 Expected: PASS.
 
-- [ ] **Step 7: Verify old artifact/project names are gone from active build configuration**
-
-Run:
+- [ ] **Step 7: Verify old active artifact names are gone**
 
 ```bash
 git grep -n 'simpledsl-build-bootstrap\|simpledsl-build-logic' -- ':!docs/superpowers/**' ':!CHANGELOG.md'
 ```
 
-Expected: no active build/runtime matches.
+Expected: no matches.
 
 - [ ] **Step 8: Commit**
 
@@ -695,147 +547,55 @@ git commit -m "refactor: rename core and Java implementation projects"
 
 ---
 
-### Task 6: Migrate the Real Published Java Consumer
+### Task 6: Add a Real Backend-Isolation Verification Gate
 
 **Files:**
-- Rename directory: `integration-tests/` -> `integration-tests-java/`
-- Rename test: `PublishedConsumerContractTest.groovy` -> `PublishedJavaConsumerContractTest.groovy`
-- Modify: `integration-tests-java/consumer/app/build.gradle`
-- Modify: `integration-tests-java/consumer/settings.gradle`
-- Modify: `integration-tests-java/build.gradle.kts`
-- Modify: `settings.gradle.kts`
-- Modify: root publication aggregation/CI inputs as required
+- Create: `buildSrc` is **not** allowed; implement in root `build.gradle.kts` using resolvable publication/configuration metadata already available in the build
+- Modify: `build.gradle.kts`
+- Modify: `integration-tests-java/src/test/groovy/io/github/qigao/simpledsl/PublishedJavaConsumerContractTest.groovy`
+- Modify: `.github/workflows/ci.yml` in Task 7 to invoke the gate
 
-**Interfaces:**
-- Consumer project applies `io.github.qigao.simpledsl.java`.
-- Published marker set for Phase A is exactly:
-  ```text
-  io.github.qigao.simpledsl.settings
-  io.github.qigao.simpledsl.java
-  ```
-  with `.build` absent. The final `.android` marker is added only by Phase B.
+**Produces:** root task `verifyBackendIsolation`.
 
-- [ ] **Step 1: Change the published-consumer marker assertion first and verify RED**
+- [ ] **Step 1: Write RED integration assertion for the missing gate**
 
-Update the contract expectation to settings + java only and explicitly reject `.build`:
-
-```groovy
-assertEquals([
-    'io.github.qigao.simpledsl.java',
-    'io.github.qigao.simpledsl.settings'
-] as Set, markerIds)
-assertFalse(markerIds.contains('io.github.qigao.simpledsl.build'))
-```
-
-Run the integration test before fixture migration; expected failure is that the old consumer still requests `.build` or the publication set is inconsistent.
-
-- [ ] **Step 2: Rename the integration project and fixture**
+Add a contract assertion that the repository verification command includes/invokes `verifyBackendIsolation`, then run:
 
 ```bash
-git mv integration-tests integration-tests-java
+./gradlew verifyBackendIsolation --stacktrace
 ```
 
-Update root inclusion to `integration-tests-java`.
+Expected: FAIL with `Task 'verifyBackendIsolation' not found`.
 
-- [ ] **Step 3: Migrate consumer build plugin ID**
+- [ ] **Step 2: Implement `verifyBackendIsolation`**
 
-Change:
+Register a root verification task that depends on publication to the isolated test repository and inspects the generated Maven POM/runtime dependency metadata for `simpledsl-core` and `simpledsl-java`.
 
-```groovy
-plugins {
-    id 'io.github.qigao.simpledsl.build'
-}
-```
-
-into:
-
-```groovy
-plugins {
-    id 'io.github.qigao.simpledsl.java'
-}
-```
-
-Do not change the existing `simpledsl { springService(); web() }` semantics.
-
-- [ ] **Step 4: Preserve fresh published-repository and fixture cache inputs**
-
-Keep both inputs in `integration-tests-java/build.gradle.kts`:
-
-```kotlin
-inputs.dir(consumerFixture)
-inputs.dir(testPluginRepository)
-```
-
-so stale Gradle build cache cannot hide a broken published consumer.
-
-- [ ] **Step 5: Add artifact dependency-isolation assertion for Java**
-
-Inspect the resolved published `simpledsl-java` runtime/POM graph in the test repository and assert no module group/name matches AGP:
-
-```text
-com.android.tools.build:gradle
-```
-
-This should be a concrete artifact-resolution assertion, not a source-code grep.
-
-- [ ] **Step 6: Run real published consumer twice for configuration-cache proof**
-
-Run:
-
-```bash
-./gradlew clean publishToTestPluginRepository :integration-tests-java:test --no-build-cache --stacktrace
-./gradlew :integration-tests-java:test --no-build-cache --stacktrace
-```
-
-Expected: both PASS; TestKit assertions must confirm configuration-cache reuse on the second consumer invocation.
-
-- [ ] **Step 7: Commit**
-
-```bash
-git add -A
-git commit -m "test: migrate published Java consumer"
-```
-
----
-
-### Task 7: Enforce Core/Java Dependency Isolation and Publication Metadata
-
-**Files:**
-- Modify: `simpledsl-core/build.gradle.kts`
-- Modify: `simpledsl-java/build.gradle.kts`
-- Modify: `gradle/libs.versions.toml` only if metadata keys need centralization
-- Modify: `simpledsl-core/src/main/groovy/io/github/qigao/simpledsl/gradle/distribution/SimpleDslDistribution.groovy`
-- Modify: generated `distribution.properties` configuration in core
-- Add tests under `simpledsl-core/src/test/.../distribution/` and/or `integration-tests-java`
-
-**Interfaces:**
-- Core distribution metadata contains version strings/coordinates needed at settings resolution time, but core POM/runtime dependencies do not carry Java product tooling.
-- Java runtime carries Spring/GraalVM/jOOQ/jsonschema2pojo as required by existing Java implementation.
-
-- [ ] **Step 1: Write RED tests that distinguish compatibility metadata from implementation dependencies**
-
-Assert core can answer managed plugin version/coordinate metadata for existing Java-owned external plugins, while the published core runtime graph contains none of:
+The task must fail if core depends on any of:
 
 ```text
 org.springframework.boot:spring-boot-gradle-plugin
 org.graalvm.buildtools:native-gradle-plugin
 org.jooq:jooq-codegen-gradle
 org.jsonschema2pojo:jsonschema2pojo-gradle-plugin
+com.android.tools.build:gradle
 ```
 
-- [ ] **Step 2: Run publication/isolation test and verify RED if any dependency leaked during extraction**
+and must fail if Java depends on:
 
-Run:
-
-```bash
-./gradlew clean publishToTestPluginRepository :integration-tests-java:test --no-build-cache --stacktrace
+```text
+com.android.tools.build:gradle
 ```
 
-Expected before fixes: fail if core inherited any Java implementation dependency.
+The Java artifact must have a dependency on:
 
-- [ ] **Step 3: Keep compatibility values as generated metadata only**
+```text
+io.github.qigao.simpledsl:simpledsl-core
+```
 
-`simpledsl-core/build.gradle.kts` may read version-catalog values to generate properties:
+- [ ] **Step 3: Keep compatibility metadata in core without implementation dependencies**
+
+`simpledsl-core/build.gradle.kts` may generate properties from version-catalog values:
 
 ```kotlin
 property("springBootPluginVersion", libs.versions.spring.boot.get())
@@ -844,48 +604,64 @@ property("jooqPluginVersion", libs.versions.jooq.get())
 property("jsonschema2pojoPluginVersion", libs.versions.jsonschema2pojo.get())
 ```
 
-but must not declare those plugin modules as `implementation(...)` dependencies.
+but must not declare those modules as core `implementation` dependencies. Java retains the existing implementation dependencies.
 
-- [ ] **Step 4: Verify Java owns implementation dependencies**
-
-`simpledsl-java/build.gradle.kts` retains the Java-side implementation dependencies and `implementation(project(":simpledsl-core"))`.
-
-- [ ] **Step 5: Run publication contract again**
-
-Run:
+- [ ] **Step 4: Verify GREEN**
 
 ```bash
-./gradlew clean publishToTestPluginRepository :integration-tests-java:test --no-build-cache --stacktrace
+./gradlew clean publishToTestPluginRepository verifyBackendIsolation :integration-tests-java:test --no-build-cache --stacktrace
 ```
 
-Expected: PASS with core graph clean and Java behavior functional.
+Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add simpledsl-core simpledsl-java integration-tests-java gradle/libs.versions.toml
+git add build.gradle.kts simpledsl-core simpledsl-java integration-tests-java
 git commit -m "test: enforce backend artifact isolation"
 ```
 
 ---
 
-### Task 8: Update CI, Release Wiring, Docs, and Perform Exact-Head Verification
+### Task 7: CI, Release Wiring, Documentation, and Exact-Head Gate
 
 **Files:**
 - Modify: `.github/workflows/ci.yml`
 - Modify: `.github/workflows/release.yml`
+- Modify: `scripts/verify-product-namespace.sh`
 - Modify: `README.md`
-- Modify: `CHANGELOG.md` only with an `Unreleased`/0.3.0 migration note, not a release tag claim
-- Modify: `scripts/verify-product-namespace.sh` if it encodes the old marker/artifact names
-- Modify: `gradle.properties` to `simpledslVersion=0.3.0-SNAPSHOT`
+- Modify: `CHANGELOG.md`
+- Modify: `gradle.properties`
 
-**Interfaces:**
-- CI verifies core, Java, published Java consumer, wrapper, and marker/artifact isolation.
-- Release workflow publishes core/settings and Java marker/implementation using tag-derived `releaseVersion`.
+- [ ] **Step 1: Update namespace verification script exactly**
 
-- [ ] **Step 1: Update CI project paths and exact Phase A gates**
+Set roots to:
 
-The CI verification command must include:
+```bash
+roots=(
+  settings.gradle.kts
+  build.gradle.kts
+  gradle.properties
+  gradle
+  simpledsl-core
+  simpledsl-java
+  integration-tests-java
+  README.md
+)
+```
+
+Set plugin builds to:
+
+```bash
+plugin_builds=(
+  simpledsl-core/build.gradle.kts
+  simpledsl-java/build.gradle.kts
+)
+```
+
+Keep existing legacy Durex and reserved-tag checks unchanged.
+
+- [ ] **Step 2: Update CI exact Phase A command**
 
 ```bash
 gradle clean \
@@ -893,17 +669,16 @@ gradle clean \
   :simpledsl-core:check \
   :simpledsl-java:check \
   publishToTestPluginRepository \
+  verifyBackendIsolation \
   :integration-tests-java:test \
   --stacktrace
 ```
 
-Do not add Android tasks in Phase A.
+No Android task is added.
 
-- [ ] **Step 2: Update release publication paths**
+- [ ] **Step 3: Update release verification/publication paths**
 
-Release verification uses the same Phase A project set with `-PreleaseVersion="$SIMPLEDSL_RELEASE_VERSION"`.
-
-Publication step publishes:
+Release verification uses the same Phase A projects with `-PreleaseVersion="$SIMPLEDSL_RELEASE_VERSION"`. Publication command becomes:
 
 ```bash
 gradle \
@@ -913,29 +688,9 @@ gradle \
   --stacktrace
 ```
 
-Phase A is not itself tagged as 0.3.0; Phase B must add Android publication before the final 0.3.0 release tag is created.
+Do not create a 0.3.0 tag in Phase A; Phase B must add Android before the final release.
 
-- [ ] **Step 3: Update README migration examples**
-
-Show:
-
-```groovy
-plugins {
-    id 'io.github.qigao.simpledsl.settings' version '0.3.0-SNAPSHOT'
-}
-```
-
-for development docs where appropriate, and project-side:
-
-```groovy
-plugins {
-    id 'io.github.qigao.simpledsl.java'
-}
-```
-
-Document that `.build` was the 0.2.x ID and is removed in 0.3.0.
-
-- [ ] **Step 4: Advance development version**
+- [ ] **Step 4: Update docs and development version**
 
 Set:
 
@@ -943,9 +698,17 @@ Set:
 simpledslVersion=0.3.0-SNAPSHOT
 ```
 
-- [ ] **Step 5: Run the full clean local verification contract**
+README project usage becomes:
 
-Run exactly:
+```groovy
+plugins {
+    id 'io.github.qigao.simpledsl.java'
+}
+```
+
+Document `.build` as removed in 0.3.0 and add an Unreleased/0.3.0 migration note to `CHANGELOG.md` without claiming a published release.
+
+- [ ] **Step 5: Run full clean local verification**
 
 ```bash
 ./gradlew clean \
@@ -953,6 +716,7 @@ Run exactly:
   :simpledsl-core:check \
   :simpledsl-java:check \
   publishToTestPluginRepository \
+  verifyBackendIsolation \
   :integration-tests-java:test \
   --no-build-cache \
   --stacktrace
@@ -960,9 +724,7 @@ Run exactly:
 
 Expected: PASS.
 
-- [ ] **Step 6: Validate publication metadata without uploading**
-
-Run:
+- [ ] **Step 6: Validate Plugin Portal metadata without upload**
 
 ```bash
 ./gradlew \
@@ -973,11 +735,9 @@ Run:
   --stacktrace
 ```
 
-Expected: PASS; this validates metadata only and does not publish a release.
+Expected: PASS.
 
-- [ ] **Step 7: Run repository surface scans**
-
-Run:
+- [ ] **Step 7: Run surface scans**
 
 ```bash
 git grep -n 'io.github.qigao.simpledsl.build' -- ':!docs/superpowers/**' ':!CHANGELOG.md'
@@ -986,36 +746,34 @@ git grep -n 'com.android.tools.build' -- simpledsl-core simpledsl-java
 ```
 
 Expected:
-- old `.build` appears only in the intentional migration-diagnostic/test strings;
-- old project/artifact names have no active runtime/build references;
-- no AGP dependency/import exists in either Phase A product module.
+- `.build` matches only intentional migration diagnostic/tests;
+- old project/artifact names have no active matches;
+- no AGP import/dependency exists in core or Java.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 8: Commit final Phase A wiring**
 
 ```bash
-git add .github README.md CHANGELOG.md scripts gradle.properties
+git add .github scripts README.md CHANGELOG.md gradle.properties
 git commit -m "chore: complete 0.3.0 phase A migration"
 ```
 
-- [ ] **Step 9: Push implementation branch and open a PR linked to #10**
+- [ ] **Step 9: Open implementation PR linked to #10**
 
-PR summary must state that Android is intentionally absent and Phase A proves the independent Java backend/core split only.
+PR body must state that Phase A intentionally contains no Android backend implementation and closes #10 only when merged.
 
-- [ ] **Step 10: Require exact-head GitHub Actions success before merge**
+- [ ] **Step 10: Require exact-head CI and final diff review**
 
-Verify the workflow associated with the final PR head SHA completes successfully and that its job steps include core tests, Java tests, the real published Java consumer, marker/artifact isolation, and wrapper metadata.
-
-- [ ] **Step 11: Review the final PR diff for boundary violations**
+Exact PR-head workflow must pass core tests, Java tests, real published Java consumer, configuration-cache contract, `verifyBackendIsolation`, namespace verification, and wrapper metadata.
 
 Reject the PR if any of these are present:
 
 ```text
-AGP implementation dependency in core or Java
-public core project plugin marker besides settings
+AGP dependency/import in core or Java
+public project-side core marker besides settings
 retained io.github.qigao.simpledsl.build marker
-Java/Spring implementation dependency moved into core
-snapshot schema still version 1
+Java/Spring implementation dependency in core
+snapshot schema version 1
 settings-time hard requirement for simpledsl.java
 ```
 
-Only after this review and exact-head CI are green is Phase A ready to merge.
+Only after exact-head CI and this boundary review are green is Phase A ready to merge.
