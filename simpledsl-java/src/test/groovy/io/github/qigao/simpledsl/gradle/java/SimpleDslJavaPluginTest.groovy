@@ -14,20 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue
 class SimpleDslJavaPluginTest {
     @Test
     void claimsJavaBackendAndCreatesJavaOnlyExtension() {
-        def project = ProjectBuilder.builder().withName('app').build()
-        project.extensions.add(
-                DependencyCatalogSnapshot,
-                'simpledslDependencyCatalog',
-                new DependencyCatalogSnapshot(
-                        25,
-                        [:],
-                        [
-                                'junit-jupiter': new CatalogLibrary(
-                                        'junit-jupiter', 'org.junit.jupiter:junit-jupiter', '5.13.4', null),
-                                'junit-platform-launcher': new CatalogLibrary(
-                                        'junit-platform-launcher', 'org.junit.platform:junit-platform-launcher', '1.13.4', null)
-                        ],
-                        [:]))
+        def project = javaProject()
 
         project.pluginManager.apply(SimpleDslJavaPlugin)
 
@@ -43,6 +30,18 @@ class SimpleDslJavaPluginTest {
     }
 
     @Test
+    void javaModulePathDoesNotLoadLegacyBuildOrModuleEntryPlugins() {
+        def project = javaProject()
+        project.pluginManager.apply(SimpleDslJavaPlugin)
+
+        (project.extensions.getByName('simpledsl') as SimpleDslJavaExtension).javaLibrary()
+
+        Set<String> appliedPluginClasses = project.plugins.collect { it.class.name } as Set<String>
+        assertFalse(appliedPluginClasses.contains('io.github.qigao.simpledsl.gradle.SimpleDslBuildPlugin'))
+        assertFalse(appliedPluginClasses.contains('io.github.qigao.simpledsl.gradle.SimpleDslModulePlugin'))
+    }
+
+    @Test
     void JavaExtensionPreservesExistingModuleMethods() {
         def methods = SimpleDslJavaExtension.methods*.name as Set
 
@@ -53,5 +52,23 @@ class SimpleDslJavaPluginTest {
         assertTrue(methods.contains('jsonSchema'))
         assertFalse(methods.contains('androidApplication'))
         assertFalse(methods.contains('androidLibrary'))
+    }
+
+    private static def javaProject() {
+        def project = ProjectBuilder.builder().withName('app').build()
+        project.extensions.add(
+                DependencyCatalogSnapshot,
+                'simpledslDependencyCatalog',
+                new DependencyCatalogSnapshot(
+                        25,
+                        [:],
+                        [
+                                'junit-jupiter': new CatalogLibrary(
+                                        'junit-jupiter', 'org.junit.jupiter:junit-jupiter', '5.13.4', null),
+                                'junit-platform-launcher': new CatalogLibrary(
+                                        'junit-platform-launcher', 'org.junit.platform:junit-platform-launcher', '1.13.4', null)
+                        ],
+                        [:]))
+        project
     }
 }
