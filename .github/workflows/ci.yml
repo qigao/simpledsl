@@ -41,7 +41,7 @@ jobs:
             :simpledsl-android:check \
             --stacktrace
 
-      - name: Verify published Java consumer contract
+      - name: Verify published consumer contracts
         shell: bash
         run: |
           set -euo pipefail
@@ -49,6 +49,7 @@ jobs:
             publishToTestPluginRepository \
             verifyBackendIsolation \
             :integration-tests-java:test \
+            :integration-tests-android:test \
             --stacktrace
 
       - name: Verify wrapper metadata
