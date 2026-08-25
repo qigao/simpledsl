@@ -50,6 +50,17 @@ jobs:
             :integration-tests-java:test \
             --stacktrace
 
+      - name: Validate plugin publication metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle \
+            :simpledsl-core:publishPlugins \
+            :simpledsl-java:publishPlugins \
+            -PreleaseVersion=0.3.0 \
+            --validate-only \
+            --stacktrace
+
       - name: Verify wrapper metadata
         shell: bash
         run: |

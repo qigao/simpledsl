@@ -8,7 +8,7 @@ roots=(
   gradle
   simpledsl-core
   simpledsl-java
-  integration-tests
+  integration-tests-java
   README.md
 )
 
