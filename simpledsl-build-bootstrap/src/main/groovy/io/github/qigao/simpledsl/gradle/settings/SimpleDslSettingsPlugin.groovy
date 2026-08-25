@@ -11,7 +11,6 @@ class SimpleDslSettingsPlugin implements Plugin<Settings> {
     void apply(Settings settings) {
         SimpleDslSettingsExtension extension = settings.extensions.create('simpledslSettings', SimpleDslSettingsExtension)
         extension.repositoryRoot.convention(settings.layout.settingsDirectory)
-        extension.dependencyManifest.convention(extension.repositoryRoot.file('gradle/simpledsl/dependencies.toml'))
         extension.modulesManifest.convention(extension.repositoryRoot.file('gradle/simpledsl/modules.toml'))
         extension.moduleDiscovery.convention(true)
 
@@ -65,9 +64,14 @@ class SimpleDslSettingsPlugin implements Plugin<Settings> {
         }
 
         settings.gradle.settingsEvaluated {
+            File repositoryRoot = extension.repositoryRoot.get().asFile.absoluteFile
+            File manifestFile = extension.dependencyManifest.isPresent()
+                    ? extension.dependencyManifest.get().asFile
+                    : DependencyManifestLocator.locate(repositoryRoot)
+
             def serviceProvider = settings.gradle.sharedServices.registerIfAbsent(
                     'simpledslDependencyRegistry', DependencyRegistryService) { spec ->
-                spec.parameters.manifestFile.set(extension.dependencyManifest)
+                spec.parameters.manifestFile.fileValue(manifestFile)
             }
             serviceHolder.provider = serviceProvider
             serviceProvider.get().javaVersion()
@@ -78,7 +82,6 @@ class SimpleDslSettingsPlugin implements Plugin<Settings> {
             List<Map<String, String>> discoveredProjects = []
             if (extension.moduleDiscovery.get()) {
                 discoveredProjects = discoverySnapshotProvider.get()
-                File repositoryRoot = extension.repositoryRoot.get().asFile.absoluteFile
                 discoveredProjects.each { entry ->
                     settings.include(entry.gradlePath)
                     def descriptor = settings.project(entry.gradlePath)

@@ -1,6 +1,7 @@
 [versions]
 plugin-publish = "2.1.1"
 tomlj = "1.1.1"
+snakeyaml-engine = "3.1.1"
 spring-boot = "4.1.0"
 graalvm-native = "1.1.1"
 jooq = "3.21.5"
@@ -9,6 +10,7 @@ junit = "5.13.4"
 
 [libraries]
 tomlj = { module = "org.tomlj:tomlj", version.ref = "tomlj" }
+snakeyaml-engine = { module = "org.snakeyaml:snakeyaml-engine", version.ref = "snakeyaml-engine" }
 spring-boot-gradle = { module = "org.springframework.boot:spring-boot-gradle-plugin", version.ref = "spring-boot" }
 graalvm-native-gradle = { module = "org.graalvm.buildtools:native-gradle-plugin", version.ref = "graalvm-native" }
 jooq-codegen-gradle = { module = "org.jooq:jooq-codegen-gradle", version.ref = "jooq" }
