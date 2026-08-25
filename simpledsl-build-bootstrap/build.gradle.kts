@@ -20,6 +20,7 @@ tasks.withType<JavaCompile>().configureEach {
 dependencies {
     implementation(localGroovy())
     implementation(libs.tomlj)
+    implementation(libs.snakeyaml.engine)
     testImplementation(gradleTestKit())
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
