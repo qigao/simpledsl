@@ -36,17 +36,18 @@ jobs:
           set -euo pipefail
           gradle \
             verifyProductNamespace \
-            :simpledsl-build-bootstrap:check \
-            :simpledsl-build-logic:check \
+            :simpledsl-core:check \
+            :simpledsl-java:check \
             --stacktrace
 
-      - name: Verify published consumer contract
+      - name: Verify published Java consumer contract
         shell: bash
         run: |
           set -euo pipefail
           gradle \
             publishToTestPluginRepository \
-            :integration-tests:test \
+            verifyBackendIsolation \
+            :integration-tests-java:test \
             --stacktrace
 
       - name: Verify wrapper metadata

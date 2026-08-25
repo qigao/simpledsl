@@ -1,0 +1,8 @@
+plugins {
+    id 'io.github.qigao.simpledsl.java'
+}
+
+simpledsl {
+    springService()
+    web()
+}

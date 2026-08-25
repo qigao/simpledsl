@@ -6,9 +6,9 @@ roots=(
   build.gradle.kts
   gradle.properties
   gradle
-  simpledsl-build-bootstrap
-  simpledsl-build-logic
-  integration-tests
+  simpledsl-core
+  simpledsl-java
+  integration-tests-java
   README.md
 )
 
@@ -30,8 +30,8 @@ if ((${#existing[@]} > 0)); then
 fi
 
 plugin_builds=(
-  simpledsl-build-bootstrap/build.gradle.kts
-  simpledsl-build-logic/build.gradle.kts
+  simpledsl-core/build.gradle.kts
+  simpledsl-java/build.gradle.kts
 )
 if grep -nE 'tags[[:space:]]*=.*"(gradle|plugin)"' "${plugin_builds[@]}"; then
   echo 'Gradle Plugin Portal reserved tag found; gradle and plugin are forbidden tags' >&2

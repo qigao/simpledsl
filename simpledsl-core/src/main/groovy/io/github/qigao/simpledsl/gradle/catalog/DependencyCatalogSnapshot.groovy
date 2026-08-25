@@ -1,0 +1,83 @@
+package io.github.qigao.simpledsl.gradle.catalog
+
+import org.gradle.api.GradleException
+
+final class DependencyCatalogSnapshot {
+    private final Integer javaToolchain
+    private final Map<String, CatalogPlatform> platforms
+    private final Map<String, CatalogLibrary> libraries
+    private final Map<String, CatalogPlugin> plugins
+    private final Map<String, CatalogPlugin> pluginsByGradleId
+
+    DependencyCatalogSnapshot(
+            Integer javaToolchain,
+            Map<String, CatalogPlatform> platforms,
+            Map<String, CatalogLibrary> libraries,
+            Map<String, CatalogPlugin> plugins) {
+        this.javaToolchain = javaToolchain
+        this.platforms = Collections.unmodifiableMap(new LinkedHashMap<>(platforms))
+        this.libraries = Collections.unmodifiableMap(new LinkedHashMap<>(libraries))
+        this.plugins = Collections.unmodifiableMap(new LinkedHashMap<>(plugins))
+
+        Map<String, CatalogPlugin> byGradleId = new LinkedHashMap<>()
+        plugins.values().each { plugin ->
+            CatalogPlugin previous = byGradleId.put(plugin.id, plugin)
+            if (previous != null) {
+                throw new GradleException(
+                        "SimpleDSL dependency catalog error\nProblem: duplicate Gradle plugin id '${plugin.id}'")
+            }
+        }
+        this.pluginsByGradleId = Collections.unmodifiableMap(byGradleId)
+    }
+
+    Integer javaToolchainOrNull() { javaToolchain }
+
+    int requireJavaToolchain(String projectPath) {
+        if (javaToolchain == null) {
+            throw new GradleException(
+                    'SimpleDSL configuration error\n' +
+                    "Project: ${projectPath}\n" +
+                    'Problem: Java backend requires simpledsl.java in the dependency manifest')
+        }
+        javaToolchain
+    }
+
+    int javaVersion() { requireJavaToolchain(':') }
+
+    CatalogPlatform platform(String alias) {
+        required(platforms, 'platform', alias)
+    }
+
+    CatalogLibrary library(String alias) {
+        required(libraries, 'library', alias)
+    }
+
+    CatalogPlugin plugin(String alias) {
+        required(plugins, 'plugin', alias)
+    }
+
+    CatalogPlugin pluginByGradleId(String id) {
+        pluginsByGradleId.get(id)
+    }
+
+    Collection<CatalogPlatform> platforms() {
+        Collections.unmodifiableList(new ArrayList<>(platforms.values()))
+    }
+
+    Collection<CatalogLibrary> libraries() {
+        Collections.unmodifiableList(new ArrayList<>(libraries.values()))
+    }
+
+    Collection<CatalogPlugin> plugins() {
+        Collections.unmodifiableList(new ArrayList<>(plugins.values()))
+    }
+
+    private static <T> T required(Map<String, T> values, String kind, String alias) {
+        T value = values.get(alias)
+        if (value == null) {
+            throw new GradleException(
+                    "SimpleDSL dependency catalog error\n${kind.capitalize()}: ${alias}\nProblem: unknown ${kind} alias")
+        }
+        value
+    }
+}
