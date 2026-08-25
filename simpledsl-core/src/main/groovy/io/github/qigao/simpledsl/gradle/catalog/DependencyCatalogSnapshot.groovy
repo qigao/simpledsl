@@ -4,6 +4,7 @@ import org.gradle.api.GradleException
 
 final class DependencyCatalogSnapshot {
     private final Integer javaToolchain
+    private final CatalogAndroidPolicy androidPolicy
     private final Map<String, CatalogPlatform> platforms
     private final Map<String, CatalogLibrary> libraries
     private final Map<String, CatalogPlugin> plugins
@@ -14,7 +15,17 @@ final class DependencyCatalogSnapshot {
             Map<String, CatalogPlatform> platforms,
             Map<String, CatalogLibrary> libraries,
             Map<String, CatalogPlugin> plugins) {
+        this(javaToolchain, null, platforms, libraries, plugins)
+    }
+
+    DependencyCatalogSnapshot(
+            Integer javaToolchain,
+            CatalogAndroidPolicy androidPolicy,
+            Map<String, CatalogPlatform> platforms,
+            Map<String, CatalogLibrary> libraries,
+            Map<String, CatalogPlugin> plugins) {
         this.javaToolchain = javaToolchain
+        this.androidPolicy = androidPolicy
         this.platforms = Collections.unmodifiableMap(new LinkedHashMap<>(platforms))
         this.libraries = Collections.unmodifiableMap(new LinkedHashMap<>(libraries))
         this.plugins = Collections.unmodifiableMap(new LinkedHashMap<>(plugins))
@@ -43,6 +54,24 @@ final class DependencyCatalogSnapshot {
     }
 
     int javaVersion() { requireJavaToolchain(':') }
+
+    CatalogAndroidPolicy androidPolicyOrNull() { androidPolicy }
+
+    CatalogAndroidPolicy requireAndroidPolicy(String projectPath, boolean targetRequired) {
+        if (androidPolicy == null) {
+            throw new GradleException(
+                    'SimpleDSL configuration error\n' +
+                    "Project: ${projectPath}\n" +
+                    'Problem: Android backend requires simpledsl.android in the dependency manifest')
+        }
+        if (targetRequired && androidPolicy.targetSdk == null) {
+            throw new GradleException(
+                    'SimpleDSL configuration error\n' +
+                    "Project: ${projectPath}\n" +
+                    'Problem: Android application requires simpledsl.android.target-sdk in the dependency manifest')
+        }
+        androidPolicy
+    }
 
     CatalogPlatform platform(String alias) {
         required(platforms, 'platform', alias)

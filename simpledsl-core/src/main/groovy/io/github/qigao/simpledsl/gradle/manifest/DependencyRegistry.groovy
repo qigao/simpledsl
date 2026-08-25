@@ -6,6 +6,7 @@ final class DependencyRegistry {
     static final int SNAPSHOT_SCHEMA_VERSION = 2
 
     private final Integer javaVersion
+    private final AndroidPolicySpec androidPolicy
     private final Map<String, VersionSpec> versions
     private final Map<String, PlatformSpec> platforms
     private final Map<String, LibrarySpec> libraries
@@ -19,7 +20,19 @@ final class DependencyRegistry {
             Map<String, LibrarySpec> libraries,
             Map<String, PluginSpec> plugins,
             Map<String, PluginSpec> pluginsByGradleId) {
+        this(javaVersion, null, versions, platforms, libraries, plugins, pluginsByGradleId)
+    }
+
+    DependencyRegistry(
+            Integer javaVersion,
+            AndroidPolicySpec androidPolicy,
+            Map<String, VersionSpec> versions,
+            Map<String, PlatformSpec> platforms,
+            Map<String, LibrarySpec> libraries,
+            Map<String, PluginSpec> plugins,
+            Map<String, PluginSpec> pluginsByGradleId) {
         this.javaVersion = javaVersion
+        this.androidPolicy = androidPolicy
         this.versions = Collections.unmodifiableMap(new LinkedHashMap<>(versions))
         this.platforms = Collections.unmodifiableMap(new LinkedHashMap<>(platforms))
         this.libraries = Collections.unmodifiableMap(new LinkedHashMap<>(libraries))
@@ -30,6 +43,8 @@ final class DependencyRegistry {
     int javaVersion() { javaVersion }
 
     Integer javaVersionOrNull() { javaVersion }
+
+    AndroidPolicySpec androidPolicyOrNull() { androidPolicy }
 
     VersionSpec version(String id) {
         required(versions, 'version', id)
@@ -59,6 +74,9 @@ final class DependencyRegistry {
         Map<String, Object> policies = new LinkedHashMap<>()
         if (javaVersion != null) {
             policies.put('java', [toolchain: javaVersion])
+        }
+        if (androidPolicy != null) {
+            policies.put('android', androidPolicy.snapshot())
         }
 
         deepFreeze([

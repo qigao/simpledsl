@@ -61,6 +61,26 @@ final class SimpleDslRegistryBridge {
             javaToolchain = requiredInteger(javaPolicy, 'toolchain', "policy 'java'")
         }
 
+        CatalogAndroidPolicy androidPolicy = null
+        Object androidNode = policies.get('android')
+        if (androidNode != null) {
+            Map android = entry(androidNode, "policy 'android'")
+            int androidJava = requiredInteger(android, 'java', "policy 'android'")
+            int compileSdk = requiredInteger(android, 'compileSdk', "policy 'android'")
+            int minSdk = requiredInteger(android, 'minSdk', "policy 'android'")
+            Integer targetSdk = optionalInteger(android, 'targetSdk', "policy 'android'")
+            if (minSdk > compileSdk) {
+                fail("dependency snapshot policy 'android'.minSdk must be <= compileSdk")
+            }
+            if (targetSdk != null && targetSdk < minSdk) {
+                fail("dependency snapshot policy 'android'.targetSdk must be >= minSdk")
+            }
+            if (targetSdk != null && targetSdk > compileSdk) {
+                fail("dependency snapshot policy 'android'.targetSdk must be <= compileSdk")
+            }
+            androidPolicy = new CatalogAndroidPolicy(androidJava, compileSdk, minSdk, targetSdk)
+        }
+
         Map platformsRaw = table(raw, 'platforms')
         Map librariesRaw = table(raw, 'libraries')
         Map pluginsRaw = table(raw, 'plugins')
@@ -94,7 +114,7 @@ final class SimpleDslRegistryBridge {
                     requiredString(item, 'version', "plugin '${alias}'")))
         }
 
-        new DependencyCatalogSnapshot(javaToolchain, platforms, libraries, plugins)
+        new DependencyCatalogSnapshot(javaToolchain, androidPolicy, platforms, libraries, plugins)
     }
 
     private static Map table(Map raw, String key) {
@@ -114,6 +134,19 @@ final class SimpleDslRegistryBridge {
 
     private static int requiredInteger(Map entry, String key, String subject) {
         Object value = entry.get(key)
+        if (!(value instanceof Number)) {
+            fail("dependency snapshot ${subject}.${key} must be an integer")
+        }
+        int result = (value as Number).intValue()
+        if (result <= 0 || (value as Number).longValue() != result) {
+            fail("dependency snapshot ${subject}.${key} must be a positive integer")
+        }
+        result
+    }
+
+    private static Integer optionalInteger(Map entry, String key, String subject) {
+        Object value = entry.get(key)
+        if (value == null) return null
         if (!(value instanceof Number)) {
             fail("dependency snapshot ${subject}.${key} must be an integer")
         }
