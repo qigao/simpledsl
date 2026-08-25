@@ -117,7 +117,7 @@ version = 25
     }
 
     @Test
-    void rejectsMismatchedSimpleDslBuildPluginVersion() {
+    void resolvesManagedJavaBackendWithoutVersion() {
         writeRootManifest('dependencies.toml', '''
 [simpledsl]
 java = 25
@@ -125,7 +125,26 @@ java = 25
         Files.createDirectories(projectDir.resolve('app'))
         Files.writeString(projectDir.resolve('app/build.gradle'), '''
 plugins {
-    id 'io.github.qigao.simpledsl.build' version '9.9.9'
+    id 'io.github.qigao.simpledsl.java'
+}
+'''.stripIndent())
+        writeSettings()
+
+        def result = runner('help').build()
+
+        assertFalse(result.output.contains('SimpleDSL version conflict'))
+    }
+
+    @Test
+    void rejectsMismatchedSimpleDslJavaPluginVersion() {
+        writeRootManifest('dependencies.toml', '''
+[simpledsl]
+java = 25
+''')
+        Files.createDirectories(projectDir.resolve('app'))
+        Files.writeString(projectDir.resolve('app/build.gradle'), '''
+plugins {
+    id 'io.github.qigao.simpledsl.java' version '9.9.9'
 }
 '''.stripIndent())
         writeSettings()
@@ -134,9 +153,30 @@ plugins {
         String managedVersion = SimpleDslDistribution.version()
 
         assertTrue(result.output.contains('SimpleDSL version conflict'))
-        assertTrue(result.output.contains('Plugin: io.github.qigao.simpledsl.build'))
+        assertTrue(result.output.contains('Plugin: io.github.qigao.simpledsl.java'))
         assertTrue(result.output.contains('Requested: 9.9.9'))
         assertTrue(result.output.contains("Managed: ${managedVersion}"))
+    }
+
+    @Test
+    void rejectsRemovedBuildPluginWithMigrationGuidance() {
+        writeRootManifest('dependencies.toml', '''
+[simpledsl]
+java = 25
+''')
+        Files.createDirectories(projectDir.resolve('app'))
+        Files.writeString(projectDir.resolve('app/build.gradle'), '''
+plugins {
+    id 'io.github.qigao.simpledsl.build'
+}
+'''.stripIndent())
+        writeSettings()
+
+        def result = runner('help').buildAndFail()
+
+        assertTrue(result.output.contains('SimpleDSL plugin migration required'))
+        assertTrue(result.output.contains('Plugin: io.github.qigao.simpledsl.build'))
+        assertTrue(result.output.contains('Replacement: io.github.qigao.simpledsl.java'))
     }
 
     @Test
