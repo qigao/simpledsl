@@ -26,6 +26,7 @@ abstract class DependencyRegistryService implements BuildService<DependencyRegis
     }
 
     int javaVersion() { registry().javaVersion() }
+    Integer javaVersionOrNull() { registry().javaVersionOrNull() }
     VersionSpec version(String id) { registry().version(id) }
     PlatformSpec platform(String id) { registry().platform(id) }
     LibrarySpec library(String id) { registry().library(id) }
