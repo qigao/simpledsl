@@ -4,22 +4,28 @@ final class SimpleDslDistribution {
     static final String GROUP = 'io.github.qigao.simpledsl'
     static final String CORE_ARTIFACT = 'simpledsl-core'
     static final String JAVA_ARTIFACT = 'simpledsl-java'
+    static final String ANDROID_ARTIFACT = 'simpledsl-android'
     static final String SETTINGS_PLUGIN_ID = 'io.github.qigao.simpledsl.settings'
     static final String JAVA_PLUGIN_ID = 'io.github.qigao.simpledsl.java'
+    static final String ANDROID_PLUGIN_ID = 'io.github.qigao.simpledsl.android'
     static final String REMOVED_BUILD_PLUGIN_ID = 'io.github.qigao.simpledsl.build'
 
     static final Map<String, String> OWNED_PLUGIN_MODULES = Collections.unmodifiableMap([
             'org.springframework.boot'         : 'org.springframework.boot:spring-boot-gradle-plugin',
             'org.graalvm.buildtools.native'   : 'org.graalvm.buildtools:native-gradle-plugin',
             'org.jooq.jooq-codegen-gradle'    : 'org.jooq:jooq-codegen-gradle',
-            'org.jsonschema2pojo'              : 'org.jsonschema2pojo:jsonschema2pojo-gradle-plugin'
+            'org.jsonschema2pojo'              : 'org.jsonschema2pojo:jsonschema2pojo-gradle-plugin',
+            'com.android.application'          : 'com.android.tools.build:gradle',
+            'com.android.library'              : 'com.android.tools.build:gradle'
     ] as LinkedHashMap<String, String>)
 
     private static final Map<String, String> OWNED_PLUGIN_VERSION_KEYS = Collections.unmodifiableMap([
             'org.springframework.boot'       : 'springBootPluginVersion',
             'org.graalvm.buildtools.native' : 'graalvmNativePluginVersion',
             'org.jooq.jooq-codegen-gradle'  : 'jooqPluginVersion',
-            'org.jsonschema2pojo'            : 'jsonschema2pojoPluginVersion'
+            'org.jsonschema2pojo'            : 'jsonschema2pojoPluginVersion',
+            'com.android.application'        : 'androidGradlePluginVersion',
+            'com.android.library'            : 'androidGradlePluginVersion'
     ] as LinkedHashMap<String, String>)
 
     private static final Properties METADATA = loadMetadata()
@@ -34,6 +40,10 @@ final class SimpleDslDistribution {
 
     static String javaCoordinate() {
         "${GROUP}:${JAVA_ARTIFACT}:${version()}"
+    }
+
+    static String androidCoordinate() {
+        "${GROUP}:${ANDROID_ARTIFACT}:${version()}"
     }
 
     static String ownedPluginVersion(String pluginId) {

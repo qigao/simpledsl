@@ -43,6 +43,16 @@ class SimpleDslSettingsPlugin implements Plugin<Settings> {
                 return
             }
 
+            if (pluginId == SimpleDslDistribution.ANDROID_PLUGIN_ID) {
+                String managed = SimpleDslDistribution.version()
+                String requested = details.requested.version
+                if (requested && requested != managed) {
+                    throw simpleDslVersionConflict(pluginId, requested, managed)
+                }
+                details.useModule(SimpleDslDistribution.androidCoordinate())
+                return
+            }
+
             String ownedVersion = SimpleDslDistribution.ownedPluginVersion(pluginId)
             if (ownedVersion != null) {
                 String requested = details.requested.version

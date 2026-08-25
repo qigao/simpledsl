@@ -35,6 +35,7 @@ val springBootPluginVersion = libs.versions.spring.boot.get()
 val graalvmNativePluginVersion = libs.versions.graalvm.native.get()
 val jooqPluginVersion = libs.versions.jooq.get()
 val jsonschema2pojoPluginVersion = libs.versions.jsonschema2pojo.get()
+val androidGradlePluginVersion = libs.versions.agp.get()
 
 val generateDistributionMetadata = tasks.register<WriteProperties>("generateDistributionMetadata") {
     destinationFile.set(
@@ -45,6 +46,7 @@ val generateDistributionMetadata = tasks.register<WriteProperties>("generateDist
     property("graalvmNativePluginVersion", graalvmNativePluginVersion)
     property("jooqPluginVersion", jooqPluginVersion)
     property("jsonschema2pojoPluginVersion", jsonschema2pojoPluginVersion)
+    property("androidGradlePluginVersion", androidGradlePluginVersion)
 }
 
 sourceSets {
