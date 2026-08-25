@@ -87,7 +87,7 @@ simpledsl {
     androidApplication {
         namespace = 'example.compose.app'
     }
-    compose()
+    jetpackCompose()
 }
 
 assert pluginManager.hasPlugin('org.jetbrains.kotlin.plugin.compose')
@@ -118,7 +118,7 @@ simpledsl {
     androidLibrary {
         namespace = 'example.compose.feature'
     }
-    compose()
+    jetpackCompose()
 }
 
 assert pluginManager.hasPlugin('org.jetbrains.kotlin.plugin.compose')
@@ -146,7 +146,7 @@ androidComponents.onVariants(androidComponents.selector().all()) { variant ->
         writeModule('feature', androidPluginPrelude() + '''
 
 simpledsl {
-    compose()
+    jetpackCompose()
 }
 ''')
 
