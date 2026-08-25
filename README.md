@@ -34,7 +34,7 @@ pluginManagement {
 }
 
 plugins {
-    id 'io.github.qigao.simpledsl.settings' version '0.1.1'
+    id 'io.github.qigao.simpledsl.settings' version '0.2.0'
 }
 
 rootProject.name = 'example'
@@ -308,7 +308,7 @@ Validate Plugin Portal metadata without uploading:
 ./gradlew \
   :simpledsl-build-bootstrap:publishPlugins \
   :simpledsl-build-logic:publishPlugins \
-  -PreleaseVersion=0.1.1 \
+  -PreleaseVersion=0.2.0 \
   --validate-only
 ```
 
