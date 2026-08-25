@@ -67,7 +67,7 @@ class PublishedConsumerContractTest {
 
         assertTrue(first.output.contains('SimpleDSL Projects'))
         assertTrue(first.output.contains(':app | app | auto | build.gradle'))
-        assertTrue(first.output.contains('Type: SPRING_SERVICE'))
+        assertTrue(first.output.contains('Type: spring-service'))
         assertTrue(first.output.contains('Features: web'))
         assertTrue(first.output.contains('SimpleDSL Doctor — :app'))
         assertTrue(first.output.contains('Configuration: OK'))
@@ -108,31 +108,29 @@ class PublishedConsumerContractTest {
         List<String> arguments = new ArrayList<>(Arrays.asList(tasks))
         arguments.add('--configuration-cache')
         arguments.add("-PsimpledslTestRepo=${requiredProperty('simpledsl.test.repo')}".toString())
+        arguments.add("-PsimpledslVersion=${requiredProperty('simpledsl.test.version')}".toString())
         arguments.add('--stacktrace')
         arguments
     }
 
     private File copyFixture(String name) {
-        File source = new File(requiredProperty('simpledsl.fixture.dir'))
-        File target = temporaryDirectory.resolve(name).toFile()
-        copyDirectory(source.toPath(), target.toPath())
-        File settings = new File(target, 'settings.gradle')
-        settings.text = settings.text.replace(
-                '@SIMPLEDSL_VERSION@',
-                requiredProperty('simpledsl.test.version'))
-        target
+        Path fixtureRoot = Path.of(requiredProperty('simpledsl.fixture.dir'))
+        Path source = fixtureRoot
+        Path target = temporaryDirectory.resolve(name)
+        copyRecursively(source, target)
+        target.toFile()
     }
 
-    private static void copyDirectory(Path source, Path target) {
+    private static void copyRecursively(Path source, Path target) {
         Files.walk(source).withCloseable { paths ->
-            paths.forEach { Path path ->
-                Path relative = source.relativize(path)
+            paths.forEach { current ->
+                Path relative = source.relativize(current)
                 Path destination = target.resolve(relative)
-                if (Files.isDirectory(path)) {
+                if (Files.isDirectory(current)) {
                     Files.createDirectories(destination)
                 } else {
                     Files.createDirectories(destination.parent)
-                    Files.copy(path, destination, StandardCopyOption.REPLACE_EXISTING)
+                    Files.copy(current, destination, StandardCopyOption.REPLACE_EXISTING)
                 }
             }
         }
@@ -140,8 +138,8 @@ class PublishedConsumerContractTest {
 
     private static String requiredProperty(String name) {
         String value = System.getProperty(name)
-        if (!value) {
-            throw new IllegalStateException("Missing test system property: ${name}")
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("Missing system property ${name}")
         }
         value
     }
