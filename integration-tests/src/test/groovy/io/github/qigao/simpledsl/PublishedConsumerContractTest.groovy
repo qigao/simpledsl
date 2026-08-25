@@ -15,8 +15,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue
 class PublishedConsumerContractTest {
     private static final List<String> PUBLIC_PLUGIN_IDS = [
             'io.github.qigao.simpledsl.settings',
-            'io.github.qigao.simpledsl.build'
+            'io.github.qigao.simpledsl.java'
     ].asImmutable()
+
+    private static final Set<String> IMPLEMENTATION_ARTIFACT_IDS = [
+            'simpledsl-core',
+            'simpledsl-java'
+    ] as Set
 
     @TempDir
     Path temporaryDirectory
@@ -50,6 +55,27 @@ class PublishedConsumerContractTest {
     }
 
     @Test
+    void publishesExactlyTheCoreAndJavaImplementationArtifacts() {
+        File repository = new File(requiredProperty('simpledsl.test.repo'))
+        String version = requiredProperty('simpledsl.test.version')
+
+        Set<String> actualImplementationArtifacts = new TreeSet<>()
+        repository.eachFileRecurse { File file ->
+            if (!file.isFile() || !file.name.endsWith('.pom')) return
+            if (file.parentFile?.name != version) return
+            String artifactId = file.parentFile.parentFile?.name
+            if (artifactId?.startsWith('simpledsl-') && !artifactId.endsWith('.gradle.plugin')) {
+                actualImplementationArtifacts.add(artifactId)
+            }
+        }
+
+        assertEquals(
+                new TreeSet<>(IMPLEMENTATION_ARTIFACT_IDS),
+                actualImplementationArtifacts,
+                "Unexpected implementation artifacts: ${actualImplementationArtifacts}".toString())
+    }
+
+    @Test
     void resolvesPublishedArtifactsWithoutSourceBuildAndReusesConfigurationCache() {
         File fixture = copyFixture('published-consumer')
         assertFalse(new File(fixture, 'settings.gradle').text.contains('includeBuild'))
@@ -67,7 +93,8 @@ class PublishedConsumerContractTest {
 
         assertTrue(first.output.contains('SimpleDSL Projects'))
         assertTrue(first.output.contains(':app | app | auto | build.gradle'))
-        assertTrue(first.output.contains('Type: SPRING_SERVICE'))
+        assertTrue(first.output.contains('Backend: java'))
+        assertTrue(first.output.contains('Type: spring-service'))
         assertTrue(first.output.contains('Features: web'))
         assertTrue(first.output.contains('SimpleDSL Doctor — :app'))
         assertTrue(first.output.contains('Configuration: OK'))
@@ -85,10 +112,10 @@ class PublishedConsumerContractTest {
     }
 
     @Test
-    void rejectsMismatchedPublishedSimpleDslBuildVersion() {
+    void rejectsMismatchedPublishedSimpleDslJavaVersion() {
         File fixture = copyFixture('version-conflict')
         new File(fixture, 'app/build.gradle').text = '''plugins {
-    id 'io.github.qigao.simpledsl.build' version '9.9.9'
+    id 'io.github.qigao.simpledsl.java' version '9.9.9'
 }
 '''
 
@@ -99,7 +126,7 @@ class PublishedConsumerContractTest {
                 .buildAndFail()
 
         assertTrue(result.output.contains('SimpleDSL version conflict'))
-        assertTrue(result.output.contains('Plugin: io.github.qigao.simpledsl.build'))
+        assertTrue(result.output.contains('Plugin: io.github.qigao.simpledsl.java'))
         assertTrue(result.output.contains('Requested: 9.9.9'))
         assertTrue(result.output.contains("Managed: ${managedVersion}"))
     }
