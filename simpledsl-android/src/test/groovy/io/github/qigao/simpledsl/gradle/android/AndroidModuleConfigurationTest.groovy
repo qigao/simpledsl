@@ -15,12 +15,8 @@ class AndroidModuleConfigurationTest {
 
     @Test
     void configuresAndroidApplicationFromRepositoryPolicy() {
-        writeManifest(true)
-        writeSettings()
-        writeModule('app', '''
-plugins {
-    id 'io.github.qigao.simpledsl.android'
-}
+        writeSettings('app')
+        writeModule('app', androidBuildPrelude(36) + '''
 
 simpledsl {
     androidApplication {
@@ -47,12 +43,8 @@ assert androidDsl.compileOptions.targetCompatibility == JavaVersion.VERSION_21
 
     @Test
     void configuresAndroidLibraryWithoutTargetSdkPolicy() {
-        writeManifest(false)
-        writeSettings()
-        writeModule('feature', '''
-plugins {
-    id 'io.github.qigao.simpledsl.android'
-}
+        writeSettings('feature')
+        writeModule('feature', androidBuildPrelude(null) + '''
 
 simpledsl {
     androidLibrary {
@@ -77,12 +69,8 @@ assert androidDsl.compileOptions.targetCompatibility == JavaVersion.VERSION_21
 
     @Test
     void rejectsApplicationPolicyWithoutTargetSdk() {
-        writeManifest(false)
-        writeSettings()
-        writeModule('app', '''
-plugins {
-    id 'io.github.qigao.simpledsl.android'
-}
+        writeSettings('app')
+        writeModule('app', androidBuildPrelude(null) + '''
 
 simpledsl {
     androidApplication {
@@ -99,12 +87,8 @@ simpledsl {
 
     @Test
     void rejectsMissingNamespace() {
-        writeManifest(true)
-        writeSettings()
-        writeModule('feature', '''
-plugins {
-    id 'io.github.qigao.simpledsl.android'
-}
+        writeSettings('feature')
+        writeModule('feature', androidBuildPrelude(36) + '''
 
 simpledsl {
     androidLibrary { }
@@ -118,18 +102,28 @@ simpledsl {
         assertTrue(result.output.contains('Project: :feature'))
     }
 
-    private void writeManifest(boolean targetSdk) {
-        String targetLine = targetSdk ? 'target-sdk = 36\n' : ''
-        Files.writeString(projectDir.resolve('dependencies.toml'), """
-[simpledsl.android]
-java = 21
-compile-sdk = 36
-min-sdk = 24
-${targetLine}""".stripIndent())
+    private static String androidBuildPrelude(Integer targetSdk) {
+        String target = targetSdk == null ? 'null' : targetSdk.toString()
+        """
+import io.github.qigao.simpledsl.gradle.catalog.CatalogAndroidPolicy
+import io.github.qigao.simpledsl.gradle.catalog.DependencyCatalogSnapshot
+
+extensions.add(
+    DependencyCatalogSnapshot,
+    'simpledslDependencyCatalog',
+    new DependencyCatalogSnapshot(
+        null,
+        new CatalogAndroidPolicy(21, 36, 24, ${target}),
+        [:],
+        [:],
+        [:]))
+
+apply plugin: 'io.github.qigao.simpledsl.android'
+""".stripIndent()
     }
 
-    private void writeSettings() {
-        Files.writeString(projectDir.resolve('settings.gradle'), '''
+    private void writeSettings(String moduleName) {
+        Files.writeString(projectDir.resolve('settings.gradle'), """
 pluginManagement {
     repositories {
         google()
@@ -138,12 +132,9 @@ pluginManagement {
     }
 }
 
-plugins {
-    id 'io.github.qigao.simpledsl.settings'
-}
-
 rootProject.name = 'android-consumer'
-'''.stripIndent())
+include '${moduleName}'
+""".stripIndent())
     }
 
     private void writeModule(String name, String buildScript) {
