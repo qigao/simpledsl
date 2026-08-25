@@ -2,22 +2,22 @@ versions:
   spring-boot: "4.1.0"
 
 libraries:
-  spring-bom:
+  spring:
     module: org.springframework.boot:spring-boot-dependencies
     version:
       ref: spring-boot
   spring-core:
     module: org.springframework.boot:spring-boot-starter
-    platform: spring-bom
+    platform: spring
   spring-test:
     module: org.springframework.boot:spring-boot-starter-test
-    platform: spring-bom
+    platform: spring
   spring-webmvc:
     module: org.springframework.boot:spring-boot-starter-webmvc
-    platform: spring-bom
+    platform: spring
   spring-validation:
     module: org.springframework.boot:spring-boot-starter-validation
-    platform: spring-bom
+    platform: spring
   spring-webmvc-test:
     module: org.springframework.boot:spring-boot-starter-webmvc-test
-    platform: spring-bom
+    platform: spring
