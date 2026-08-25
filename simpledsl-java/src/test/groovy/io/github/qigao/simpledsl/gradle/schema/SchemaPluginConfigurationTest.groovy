@@ -1,8 +1,8 @@
 package io.github.qigao.simpledsl.gradle.schema
 
-import io.github.qigao.simpledsl.gradle.SimpleDslExtension
 import io.github.qigao.simpledsl.gradle.catalog.CatalogLibrary
 import io.github.qigao.simpledsl.gradle.catalog.DependencyCatalogSnapshot
+import io.github.qigao.simpledsl.gradle.java.SimpleDslJavaExtension
 import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Test
@@ -47,12 +47,12 @@ class SchemaPluginConfigurationTest {
     }
 
     @Test
-    void simpleDslExtensionActivatesJooqSchema() {
+    void simpleDslJavaExtensionActivatesJooqSchema() {
         def project = ProjectBuilder.builder().build()
         project.pluginManager.apply('java')
         addJooqCatalog(project)
         def model = project.objects.newInstance(SimpleDslModuleModel)
-        def simpledsl = new SimpleDslExtension(project, model)
+        def simpledsl = new SimpleDslJavaExtension(project, model)
 
         simpledsl.jooqSchema()
 
@@ -61,11 +61,11 @@ class SchemaPluginConfigurationTest {
     }
 
     @Test
-    void simpleDslExtensionActivatesJsonSchema() {
+    void simpleDslJavaExtensionActivatesJsonSchema() {
         def project = ProjectBuilder.builder().build()
         project.pluginManager.apply('java')
         def model = project.objects.newInstance(SimpleDslModuleModel)
-        def simpledsl = new SimpleDslExtension(project, model)
+        def simpledsl = new SimpleDslJavaExtension(project, model)
 
         simpledsl.jsonSchema()
 
