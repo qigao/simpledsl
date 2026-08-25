@@ -1,8 +1,10 @@
 package io.github.qigao.simpledsl.gradle.android.module
 
 import com.android.build.api.dsl.LibraryExtension
+import com.android.build.api.variant.LibraryAndroidComponentsExtension
 import io.github.qigao.simpledsl.gradle.android.SimpleDslAndroidLibrarySpec
 import io.github.qigao.simpledsl.gradle.android.internal.SimpleDslAndroidBase
+import io.github.qigao.simpledsl.gradle.android.internal.SimpleDslAndroidComponents
 import io.github.qigao.simpledsl.gradle.catalog.CatalogAndroidPolicy
 import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
 import org.gradle.api.Plugin
@@ -27,5 +29,9 @@ final class SimpleDslAndroidLibraryPlugin implements Plugin<Project> {
         android.defaultConfig.minSdk = policy.minSdk
         android.compileOptions.sourceCompatibility = SimpleDslAndroidBase.javaVersion(policy)
         android.compileOptions.targetCompatibility = SimpleDslAndroidBase.javaVersion(policy)
+
+        LibraryAndroidComponentsExtension components =
+                project.extensions.getByType(LibraryAndroidComponentsExtension)
+        SimpleDslAndroidComponents.configure(project, components)
     }
 }
