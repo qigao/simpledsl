@@ -137,6 +137,23 @@ plugins {
     }
 
     @Test
+    void mapsUnversionedAndroidBackendToManagedCoordinate() {
+        writeAndroidManifest()
+        Files.createDirectories(projectDir.resolve('app'))
+        Files.writeString(projectDir.resolve('app/build.gradle'), '''
+plugins {
+    id 'io.github.qigao.simpledsl.android'
+}
+'''.stripIndent())
+        writeSettings()
+
+        def result = runner('help').buildAndFail()
+
+        assertTrue(result.output.contains(SimpleDslDistribution.androidCoordinate()))
+        assertFalse(result.output.contains('SimpleDSL version conflict'))
+    }
+
+    @Test
     void rejectsMismatchedSimpleDslJavaPluginVersion() {
         writeRootManifest('dependencies.toml', '''
 [simpledsl]
@@ -157,6 +174,79 @@ plugins {
         assertTrue(result.output.contains('Plugin: io.github.qigao.simpledsl.java'))
         assertTrue(result.output.contains('Requested: 9.9.9'))
         assertTrue(result.output.contains("Managed: ${managedVersion}"))
+    }
+
+    @Test
+    void rejectsMismatchedSimpleDslAndroidPluginVersion() {
+        writeAndroidManifest()
+        Files.createDirectories(projectDir.resolve('app'))
+        Files.writeString(projectDir.resolve('app/build.gradle'), '''
+plugins {
+    id 'io.github.qigao.simpledsl.android' version '9.9.9'
+}
+'''.stripIndent())
+        writeSettings()
+
+        def result = runner('help').buildAndFail()
+        String managedVersion = SimpleDslDistribution.version()
+
+        assertTrue(result.output.contains('SimpleDSL version conflict'))
+        assertTrue(result.output.contains('Plugin: io.github.qigao.simpledsl.android'))
+        assertTrue(result.output.contains('Requested: 9.9.9'))
+        assertTrue(result.output.contains("Managed: ${managedVersion}"))
+    }
+
+    @Test
+    void mapsUnversionedAndroidApplicationPluginToPinnedAgp() {
+        writeAndroidManifest()
+        Files.createDirectories(projectDir.resolve('app'))
+        Files.writeString(projectDir.resolve('app/build.gradle'), '''
+plugins {
+    id 'com.android.application'
+}
+'''.stripIndent())
+        writeSettings()
+
+        def result = runner('help').buildAndFail()
+
+        assertTrue(result.output.contains('com.android.tools.build:gradle:9.0.1'))
+        assertFalse(result.output.contains('SimpleDSL plugin compatibility error'))
+    }
+
+    @Test
+    void mapsUnversionedAndroidLibraryPluginToPinnedAgp() {
+        writeAndroidManifest()
+        Files.createDirectories(projectDir.resolve('feature'))
+        Files.writeString(projectDir.resolve('feature/build.gradle'), '''
+plugins {
+    id 'com.android.library'
+}
+'''.stripIndent())
+        writeSettings()
+
+        def result = runner('help').buildAndFail()
+
+        assertTrue(result.output.contains('com.android.tools.build:gradle:9.0.1'))
+        assertFalse(result.output.contains('SimpleDSL plugin compatibility error'))
+    }
+
+    @Test
+    void rejectsConsumerOverrideOfPinnedAgpVersion() {
+        writeAndroidManifest()
+        Files.createDirectories(projectDir.resolve('app'))
+        Files.writeString(projectDir.resolve('app/build.gradle'), '''
+plugins {
+    id 'com.android.application' version '9.0.2'
+}
+'''.stripIndent())
+        writeSettings()
+
+        def result = runner('help').buildAndFail()
+
+        assertTrue(result.output.contains('SimpleDSL plugin compatibility error'))
+        assertTrue(result.output.contains('Plugin: com.android.application'))
+        assertTrue(result.output.contains('Requested: 9.0.2'))
+        assertTrue(result.output.contains('Managed: 9.0.1'))
     }
 
     @Test
@@ -221,6 +311,16 @@ version = "9.9.9"
         assertTrue(result.output.contains('Plugin: org.springframework.boot'))
         assertTrue(result.output.contains('Requested: 9.9.9'))
         assertTrue(result.output.contains('Managed: 4.1.0'))
+    }
+
+    private void writeAndroidManifest() {
+        writeRootManifest('dependencies.toml', '''
+[simpledsl.android]
+java = 21
+compile-sdk = 36
+min-sdk = 24
+target-sdk = 36
+''')
     }
 
     private void writeRootManifest(String name, String manifest) {
