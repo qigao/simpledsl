@@ -31,7 +31,15 @@ jobs:
           test -n "$VERSION"
           echo "SIMPLEDSL_RELEASE_VERSION=$VERSION" >> "$GITHUB_ENV"
 
-      - name: Verify master build
+      - name: Verify Android SDK baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ANDROID_HOME:-}"
+          test -d "$ANDROID_HOME/platforms/android-36"
+          test -d "$ANDROID_HOME/build-tools/36.0.0"
+
+      - name: Verify release distribution
         shell: bash
         run: |
           set -euo pipefail
@@ -39,9 +47,11 @@ jobs:
             verifyProductNamespace \
             :simpledsl-core:check \
             :simpledsl-java:check \
+            :simpledsl-android:check \
             publishToTestPluginRepository \
             verifyBackendIsolation \
             :integration-tests-java:test \
+            :integration-tests-android:test \
             -PreleaseVersion="$SIMPLEDSL_RELEASE_VERSION" \
             --stacktrace
 
@@ -57,5 +67,6 @@ jobs:
           gradle \
             :simpledsl-core:publishPlugins \
             :simpledsl-java:publishPlugins \
+            :simpledsl-android:publishPlugins \
             -PreleaseVersion="$SIMPLEDSL_RELEASE_VERSION" \
             --stacktrace

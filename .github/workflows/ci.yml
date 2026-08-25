@@ -27,6 +27,14 @@ jobs:
         with:
           gradle-version: '9.1.0'
 
+      - name: Verify Android SDK baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ANDROID_HOME:-}"
+          test -d "$ANDROID_HOME/platforms/android-36"
+          test -d "$ANDROID_HOME/build-tools/36.0.0"
+
       - name: Clean workspace
         run: gradle clean --stacktrace
 

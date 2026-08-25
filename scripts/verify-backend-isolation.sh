@@ -74,6 +74,10 @@ if contains_coordinate "$java_dependencies" 'com.android.tools.build:gradle'; th
   echo 'SimpleDSL Java dependency isolation violation: com.android.tools.build:gradle' >&2
   exit 1
 fi
+if contains_coordinate "$java_dependencies" 'io.github.qigao.simpledsl:simpledsl-android'; then
+  echo 'SimpleDSL Java dependency isolation violation: simpledsl-android' >&2
+  exit 1
+fi
 
 for coordinate in "${java_tooling[@]}"; do
   if contains_coordinate "$android_dependencies" "$coordinate"; then
@@ -81,6 +85,10 @@ for coordinate in "${java_tooling[@]}"; do
     exit 1
   fi
 done
+if contains_coordinate "$android_dependencies" 'io.github.qigao.simpledsl:simpledsl-java'; then
+  echo 'SimpleDSL Android dependency isolation violation: simpledsl-java' >&2
+  exit 1
+fi
 
 required_core='io.github.qigao.simpledsl:simpledsl-core'
 if ! contains_coordinate "$java_dependencies" "$required_core"; then

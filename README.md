@@ -1,47 +1,44 @@
 # SimpleDSL Gradle Platform
 
-SimpleDSL is a Gradle build platform for repository dependency policy and module-oriented builds. The 0.3.0 development line separates backend-neutral build infrastructure from product-specific project backends so Java/Spring and Android can evolve independently without sharing implementation dependencies.
+SimpleDSL is a Gradle build platform for repository dependency policy and module-oriented builds. The 0.3.0 development line separates backend-neutral infrastructure from independent Java/Spring and Android project backends.
 
-> **Development status:** this branch contains 0.3.0 Phase A: `simpledsl-core` plus the Java/Spring backend. The Android backend is Phase B work and is not part of the current implementation yet. The latest completed release notes remain under 0.2.0 in `CHANGELOG.md`.
+> **Development status:** Phase A (shared core + Java backend) and Phase B (Android backend foundation) are implemented on this branch. `0.3.0` is still under development and has not been released. Compose remains Phase C.
 
 ## Requirements
 
 - Gradle 9.1 is the repository baseline.
 - SimpleDSL plugin artifacts run on Java 21 or newer.
-- Consumer Java toolchains are configured by repository policy and may target a newer Java release.
+- The Android backend baseline is AGP 9.0.1 with compileSdk 36.
+- Android uses AGP 9 built-in Kotlin support; SimpleDSL does not apply `org.jetbrains.kotlin.android`.
 
 ## Public plugins
 
-Phase A publishes exactly these two Gradle plugin IDs:
+The 0.3.0 development distribution publishes exactly three public plugin IDs:
 
 ```text
 io.github.qigao.simpledsl.settings
 io.github.qigao.simpledsl.java
+io.github.qigao.simpledsl.android
 ```
 
-`io.github.qigao.simpledsl.settings` runs in the Settings lifecycle. It loads SimpleDSL TOML or YAML repository policy, manages dependency/plugin coordinates and versions, exports the backend-neutral dependency snapshot, and performs module discovery.
+`io.github.qigao.simpledsl.settings` runs in the Settings lifecycle. It loads the repository TOML/YAML policy, owns managed plugin/dependency versions, exports snapshot schema v2, and performs module discovery.
 
-`io.github.qigao.simpledsl.java` is the Java/Spring project backend. Java module types, capabilities, schema helpers, and third-party Gradle plugins remain implementation/configuration details and do not get separate SimpleDSL marker IDs.
+`io.github.qigao.simpledsl.java` is the Java/Spring project backend.
 
-The 0.2.x project marker:
+`io.github.qigao.simpledsl.android` is the Android project backend. It owns Android application/library module configuration and AGP public API integration.
 
-```text
-io.github.qigao.simpledsl.build
-```
-
-is removed in 0.3.0. Applying it through the 0.3.0 settings plugin fails with migration guidance to use `io.github.qigao.simpledsl.java`.
-
-`io.github.qigao.simpledsl.android` is reserved for the Phase B Android backend and is not published by Phase A.
+The 0.2.x project marker `io.github.qigao.simpledsl.build` is removed in 0.3.0. Java consumers migrate to `io.github.qigao.simpledsl.java`.
 
 ## 0.3.0 development usage
 
-The repository development version is `0.3.0-SNAPSHOT`. Snapshot coordinates are used by the repository's isolated published-consumer tests; they are not a claim that `0.3.0` has been released to the Plugin Portal.
+The repository development version is `0.3.0-SNAPSHOT`. Snapshot coordinates are used by isolated published-consumer tests; they are not a claim that 0.3.0 has been released to the Plugin Portal.
 
-A settings build uses the SimpleDSL settings entry point:
+A repository applies the settings plugin once:
 
 ```groovy
 pluginManagement {
     repositories {
+        google()
         gradlePluginPortal()
         mavenCentral()
     }
@@ -55,12 +52,24 @@ rootProject.name = 'example'
 
 dependencyResolutionManagement {
     repositories {
+        google()
         mavenCentral()
     }
 }
 ```
 
-A Java/Spring project applies only the Java backend:
+The settings plugin resolves the Java and Android backends to the same SimpleDSL release version. An explicitly requested conflicting backend version fails with a `SimpleDSL version conflict` diagnostic.
+
+### Java/Spring backend
+
+Repository policy:
+
+```toml
+[simpledsl]
+java = 25
+```
+
+Project build:
 
 ```groovy
 plugins {
@@ -73,29 +82,86 @@ simpledsl {
 }
 ```
 
-The settings plugin resolves the Java backend to the same SimpleDSL release version. An explicitly requested conflicting backend version fails with a `SimpleDSL version conflict` diagnostic.
+The Java backend owns `java-library`, `spring-library`, `spring-service`, Java capabilities, and schema helpers such as jOOQ/JSON Schema generation.
 
-### Migrating from 0.2.x
+### Android backend
 
-The project-side migration is intentionally small:
+Android repository policy is independent from the server-side Java policy:
+
+```toml
+[simpledsl.android]
+java = 21
+compile-sdk = 36
+min-sdk = 24
+target-sdk = 36
+```
+
+`target-sdk` is optional for an Android-library-only repository, but `androidApplication()` requires it.
+
+Application module:
 
 ```groovy
-// 0.2.x
 plugins {
-    id 'io.github.qigao.simpledsl.build'
+    id 'io.github.qigao.simpledsl.android'
 }
 
-// 0.3.0
-plugins {
-    id 'io.github.qigao.simpledsl.java'
+simpledsl {
+    androidApplication {
+        namespace = 'com.example.app'
+    }
 }
 ```
 
-The dependency manifest and existing Java/Spring DSL remain compatible.
+`applicationId` defaults to the namespace and can be overridden explicitly:
+
+```groovy
+simpledsl {
+    androidApplication {
+        namespace = 'com.example.app'
+        applicationId = 'com.example.product'
+    }
+}
+```
+
+Library module:
+
+```groovy
+plugins {
+    id 'io.github.qigao.simpledsl.android'
+}
+
+simpledsl {
+    androidLibrary {
+        namespace = 'com.example.feature'
+    }
+}
+```
+
+The backend applies `com.android.application` or `com.android.library` and configures only AGP 9 public DSL/API surfaces (`ApplicationExtension`, `LibraryExtension`, and Android Components APIs). It does not use legacy `BaseExtension`, `AppExtension`, `applicationVariants`, or task-name guessing.
+
+The Android Java policy controls `compileOptions.sourceCompatibility` and `targetCompatibility`. AGP 9 built-in Kotlin inherits the compatible JVM target; SimpleDSL does not add a second Kotlin plugin/version policy.
+
+### Android Components proof surface
+
+Application and library modules expose:
+
+```text
+simpledslAndroidVariants
+```
+
+For example:
+
+```bash
+./gradlew :app:simpledslAndroidVariants
+```
+
+The task is populated through `beforeVariants`/`onVariants` on the public Android Components API and stores only serializable variant-name inputs, so it is compatible with Gradle configuration cache.
+
+Compose is intentionally not part of Phase B. It will be the first Android capability in Phase C.
 
 ## Dependency manifest
 
-SimpleDSL discovers the dependency manifest at the repository root. Exactly one of these default names may exist:
+SimpleDSL discovers exactly one dependency manifest at repository root:
 
 ```text
 dependencies.toml
@@ -103,27 +169,21 @@ dependencies.yml
 dependencies.yaml
 ```
 
-If none exists, configuration fails and lists the accepted names. If more than one exists, configuration fails as ambiguous; SimpleDSL does not assign precedence between TOML and YAML.
+If none exists, configuration fails and lists the accepted names. If more than one exists, configuration fails as ambiguous.
 
-A typical repository keeps the root manifest small and includes policy fragments:
-
-```text
-repo/
-├── dependencies.toml
-├── dependencies/
-│   ├── spring.toml
-│   └── test.yml
-├── settings.gradle
-└── ...
-```
-
-TOML uses Gradle Version Catalog vocabulary for versions, libraries, plugins, and `version.ref`, with small SimpleDSL extensions for build policy and includes:
+A repository may keep the root manifest small and include policy fragments:
 
 ```toml
 include = ["dependencies/spring.toml", "dependencies/test.yml"]
 
 [simpledsl]
 java = 25
+
+[simpledsl.android]
+java = 21
+compile-sdk = 36
+min-sdk = 24
+target-sdk = 36
 
 [versions]
 spring-boot = "4.1.0"
@@ -135,42 +195,13 @@ version.ref = "spring-boot"
 [libraries.spring-web]
 module = "org.springframework.boot:spring-boot-starter-web"
 platform = "spring"
-
-[plugins.spring-boot]
-id = "org.springframework.boot"
-module = "org.springframework.boot:spring-boot-gradle-plugin"
-version.ref = "spring-boot"
 ```
 
-A BOM/platform coordinate is an ordinary library declaration. Libraries versioned by that BOM reference its alias with `platform`; there is no public `[platforms]` section. The built-in Spring module integration activates the platform alias `spring`, so a Spring Boot BOM used by `springService()` or `springLibrary()` should be declared as the `spring` library alias.
+TOML and YAML share one semantic model. Includes are resolved relative to the declaring file and may mix `.toml`, `.yml`, and `.yaml`. Duplicate aliases, include cycles, malformed coordinates, unknown platform aliases, unsupported keys, and ambiguous root manifests fail fast.
 
-YAML is an equivalent serialization of the same semantic model:
+A BOM/platform coordinate is an ordinary library declaration referenced through `platform`; there is no public `[platforms]` section.
 
-```yaml
-simpledsl:
-  java: 25
-versions:
-  spring-boot: "4.1.0"
-libraries:
-  spring:
-    module: org.springframework.boot:spring-boot-dependencies
-    version:
-      ref: spring-boot
-  spring-web:
-    module: org.springframework.boot:spring-boot-starter-web
-    platform: spring
-plugins:
-  spring-boot:
-    id: org.springframework.boot
-    version:
-      ref: spring-boot
-```
-
-Includes are resolved relative to the file that declares them and may mix `.toml`, `.yml`, and `.yaml`. Duplicate aliases and include cycles fail regardless of serialization format.
-
-The Gradle-shaped vocabulary is a compatibility convention rather than a claim that a SimpleDSL manifest is itself a Gradle Version Catalog. `simpledsl`, `include`, and `platform` ownership are SimpleDSL policy semantics layered on the familiar dependency notation.
-
-A non-default location can be selected explicitly in `settings.gradle`:
+A non-default manifest can be selected explicitly:
 
 ```groovy
 simpledslSettings {
@@ -178,22 +209,24 @@ simpledslSettings {
 }
 ```
 
-### Java policy in snapshot schema v2
+## Snapshot schema v2
 
-The 0.3.0 internal dependency snapshot uses schema version 2. Java policy is exported under a backend policy map instead of a globally required top-level Java version.
+The shared settings/core layer exports backend policies under snapshot schema version 2.
 
-`simpledsl.java` is therefore optional during Settings evaluation. It becomes required when `io.github.qigao.simpledsl.java` is applied to a project:
+Java policy remains compatible with 0.2.x syntax:
 
 ```toml
 [simpledsl]
 java = 25
 ```
 
-This change is what allows a future Android-only repository to load the shared settings/core layer without inventing a server-side Java policy.
+It is optional during Settings evaluation and becomes required only when the Java backend is used.
+
+Android policy is exported independently from `[simpledsl.android]`. This allows, for example, a monorepo to use Java 25 for server modules and Java 21 for Android modules without coupling their backend policies.
 
 ## Module discovery
 
-SimpleDSL discovers Gradle modules from the repository root by default. A directory containing one of the supported build descriptors can be discovered automatically:
+SimpleDSL discovers Gradle modules from repository root by default. Supported build descriptors include:
 
 ```text
 build.spring.gradle
@@ -202,27 +235,11 @@ build.gradle
 build.gradle.kts
 ```
 
-Transient output directories such as `build/` and `.gradle/` are excluded from discovery.
+Transient output directories such as `build/` and `.gradle/` are excluded. Optional discovery overrides use `gradle/simpledsl/modules.toml`.
 
-Optional discovery overrides use:
+## Java capabilities and schema helpers
 
-```text
-gradle/simpledsl/modules.toml
-```
-
-The modules file can select automatic, strict automatic, or manual discovery and can provide explicit roots, exclusions, and module declarations.
-
-## Java module and capability model
-
-The Java backend owns these module types:
-
-```text
-java-library
-spring-library
-spring-service
-```
-
-and capabilities such as:
+The Java backend owns capabilities such as:
 
 ```text
 aop
@@ -238,21 +255,11 @@ native
 lombok
 ```
 
-They are backend DSL/configuration names, not public Plugin Portal IDs. The shared core owns the generic module model, dependency bridge, capability engine primitives, backend guard, and common diagnostics; Java/Spring registrations live only in `simpledsl-java`.
-
-Capabilities validate module compatibility, dependency requirements, conflicts, and platform bindings. External Gradle plugins required by Java capabilities are loaded from their original third-party plugin artifacts.
-
-## Schema code generation
-
-Schema generators remain Java-backend capabilities and do not have public Plugin Portal IDs.
+They are backend DSL/configuration names, not public Plugin Portal IDs. The shared core owns only generic module/capability primitives, dependency bridging, backend claiming, and common diagnostics.
 
 For jOOQ DDL generation:
 
 ```groovy
-plugins {
-    id 'io.github.qigao.simpledsl.java'
-}
-
 simpledsl {
     javaLibrary()
     jooqSchema()
@@ -267,10 +274,6 @@ simpledslJooq {
 For JSON Schema generation:
 
 ```groovy
-plugins {
-    id 'io.github.qigao.simpledsl.java'
-}
-
 simpledsl {
     javaLibrary()
     jsonSchema()
@@ -293,75 +296,79 @@ simpledslProjects
 simpledslDependencies
 ```
 
-The Java backend registers:
+Backend-neutral project diagnostics include:
 
 ```text
 simpledslCapabilities
 simpledslDoctor
 ```
 
-Typical usage:
-
-```bash
-./gradlew simpledslProjects
-./gradlew :app:simpledslCapabilities
-./gradlew :app:simpledslDoctor
-```
-
-`simpledslDoctor` fails the build when module type, capabilities, dependency aliases, or platform bindings are inconsistent.
+Android additionally exposes `simpledslAndroidVariants` as the public Android Components proof task.
 
 ## Artifact and publication model
 
-Phase A has two implementation artifacts:
+The 0.3.0 development distribution has three implementation artifacts:
 
 ```text
 io.github.qigao.simpledsl:simpledsl-core
 io.github.qigao.simpledsl:simpledsl-java
+io.github.qigao.simpledsl:simpledsl-android
 ```
 
-They back exactly these current marker IDs:
+They back exactly the three public marker IDs listed above.
+
+Dependency boundaries are intentional:
 
 ```text
-io.github.qigao.simpledsl.settings
-io.github.qigao.simpledsl.java
+simpledsl-core
+  ├── simpledsl-java
+  └── simpledsl-android
 ```
 
-`simpledsl-core` contains the settings plugin plus backend-neutral project infrastructure. Its publication must not carry Spring Boot, GraalVM Native Build Tools, jOOQ, jsonschema2pojo, or AGP implementation dependencies.
+- `simpledsl-core` must not carry Java/Spring tooling or AGP.
+- `simpledsl-java` depends on core, must not depend on Android, and must not carry AGP.
+- `simpledsl-android` depends on core and AGP 9.0.1, must not depend on Java, and must not carry Spring/GraalVM/jOOQ/jsonschema2pojo tooling.
 
-`simpledsl-java` depends on `simpledsl-core` and owns the existing Java/Spring implementation tooling. It must not depend on AGP.
+`verifyBackendIsolation` enforces these rules against the actual POMs published to the isolated test Maven repository.
 
-The root `verifyBackendIsolation` task checks these invariants against the actual POMs published into the isolated test Maven repository, rather than relying on source-code inspection.
+## Development verification
 
-## Development
-
-Run the Phase A verification suite:
+The Phase B verification contract is:
 
 ```bash
 ./gradlew clean \
   verifyProductNamespace \
   :simpledsl-core:check \
   :simpledsl-java:check \
+  :simpledsl-android:check \
   publishToTestPluginRepository \
   verifyBackendIsolation \
   :integration-tests-java:test \
-  --no-build-cache \
+  :integration-tests-android:test \
   --stacktrace
 ```
 
-The Java published-consumer suite uses a real isolated Maven repository, root TOML with included YAML/TOML policy fragments, and verifies configuration-cache reuse.
+The Android published-consumer suite does not use `includeBuild` or `withPluginClasspath()`. It resolves the settings and Android plugins from the isolated Maven repository, resolves AGP through the managed settings contract, verifies variants/configuration-cache reuse, and assembles real application/library debug artifacts.
 
-Validate Plugin Portal metadata without uploading:
+`validatePlugins` runs as part of each plugin project's `check`. The release workflow performs the same isolated distribution verification before any Plugin Portal upload; it does not rely on fake credentials or a local `publishPlugins --validate-only` shortcut.
 
-```bash
-./gradlew \
-  :simpledsl-core:publishPlugins \
-  :simpledsl-java:publishPlugins \
-  -PreleaseVersion=0.3.0 \
-  --validate-only \
-  --stacktrace
+## 0.2.x migration
+
+Java projects change the project-side SimpleDSL entry plugin:
+
+```groovy
+// 0.2.x
+plugins {
+    id 'io.github.qigao.simpledsl.build'
+}
+
+// 0.3.0 development
+plugins {
+    id 'io.github.qigao.simpledsl.java'
+}
 ```
 
-This validates publication metadata only. A final 0.3.0 release must not be tagged until the Android backend required by the approved 0.3.0 design is implemented and verified.
+The repository-root TOML/YAML dependency model and existing Java/Spring DSL remain compatible.
 
 ## License
 
