@@ -1,6 +1,5 @@
 package io.github.qigao.simpledsl.gradle.module
 
-import io.github.qigao.simpledsl.gradle.ModuleKind
 import io.github.qigao.simpledsl.gradle.SimpleDslDependencyAccess
 import io.github.qigao.simpledsl.gradle.internal.SimpleDslJavaBasePlugin
 import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
@@ -15,7 +14,7 @@ final class SimpleDslJavaLibraryPlugin implements Plugin<Project> {
         new SimpleDslJavaBasePlugin().apply(project)
 
         SimpleDslModuleModel model = project.extensions.getByType(SimpleDslModuleModel)
-        model.claim(ModuleKind.JAVA_LIBRARY, project.path)
+        model.claim('java-library', project.path)
         SimpleDslDependencyAccess.add(project, model, 'testImplementation', 'junit-jupiter')
         SimpleDslDependencyAccess.add(project, model, 'testRuntimeOnly', 'junit-platform-launcher')
         project.tasks.withType(Test).configureEach { it.useJUnitPlatform() }

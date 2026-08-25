@@ -9,7 +9,8 @@ import org.gradle.api.tasks.TaskAction
 
 abstract class SimpleDslDoctorTask extends DefaultTask {
     @Input abstract Property<String> getProjectPathInput()
-    @Input abstract Property<String> getModuleKind()
+    @Input abstract Property<String> getBackendId()
+    @Input abstract Property<String> getModuleType()
     @Input abstract ListProperty<String> getCapabilities()
     @Input abstract ListProperty<String> getPlatformBindings()
     @Input abstract ListProperty<String> getViolations()
@@ -17,7 +18,8 @@ abstract class SimpleDslDoctorTask extends DefaultTask {
     @TaskAction
     void diagnose() {
         println "SimpleDSL Doctor — ${projectPathInput.get()}"
-        println "Module: ${moduleKind.get()}"
+        println "Backend: ${backendId.get()}"
+        println "Module: ${moduleType.get()}"
         println "Capabilities: ${capabilities.get().join(',')}"
         println "Platform bindings: ${platformBindings.get().join(',')}"
 

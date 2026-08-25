@@ -1,6 +1,5 @@
 package io.github.qigao.simpledsl.gradle.capability
 
-import io.github.qigao.simpledsl.gradle.ModuleKind
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 
@@ -8,7 +7,7 @@ import groovy.transform.ToString
 @ToString(includeNames = true)
 final class CapabilitySpec {
     final String id
-    final Set<ModuleKind> allowedModules
+    final Set<String> allowedModules
     final Set<String> requires
     final Set<String> conflicts
     final List<DependencyBinding> dependencies
@@ -16,13 +15,13 @@ final class CapabilitySpec {
 
     private CapabilitySpec(
             String id,
-            Set<ModuleKind> allowedModules,
+            Set<String> allowedModules,
             Set<String> requires,
             Set<String> conflicts,
             List<DependencyBinding> dependencies,
             Set<String> externalPluginIds) {
         this.id = id
-        this.allowedModules = Collections.unmodifiableSet(new LinkedHashSet<>(allowedModules))
+        this.allowedModules = Collections.unmodifiableSet(new TreeSet<>(allowedModules))
         this.requires = Collections.unmodifiableSet(new TreeSet<>(requires))
         this.conflicts = Collections.unmodifiableSet(new TreeSet<>(conflicts))
         List<DependencyBinding> sortedDependencies = new ArrayList<>(dependencies)
@@ -37,7 +36,7 @@ final class CapabilitySpec {
 
     static final class Builder {
         private final String id
-        private final Set<ModuleKind> allowedModules = new LinkedHashSet<>()
+        private final Set<String> allowedModules = new LinkedHashSet<>()
         private final Set<String> requires = new LinkedHashSet<>()
         private final Set<String> conflicts = new LinkedHashSet<>()
         private final List<DependencyBinding> dependencies = []
@@ -50,8 +49,8 @@ final class CapabilitySpec {
             this.id = id
         }
 
-        Builder allow(ModuleKind... kinds) {
-            allowedModules.addAll(Arrays.asList(kinds))
+        Builder allow(String... moduleTypes) {
+            allowedModules.addAll(Arrays.asList(moduleTypes))
             this
         }
 

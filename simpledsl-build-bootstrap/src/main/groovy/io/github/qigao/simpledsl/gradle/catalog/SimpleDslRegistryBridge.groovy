@@ -7,7 +7,7 @@ import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 
 final class SimpleDslRegistryBridge {
-    static final int EXPECTED_SCHEMA_VERSION = 1
+    static final int EXPECTED_SCHEMA_VERSION = 2
 
     static DependencyCatalogSnapshot fromProject(Project project) {
         def registration = project.gradle.sharedServices.registrations.findByName('simpledslDependencyRegistry')
@@ -53,9 +53,12 @@ final class SimpleDslRegistryBridge {
                     "Actual: ${actualSchema}")
         }
 
-        Object javaNode = raw.get('javaVersion')
-        if (!(javaNode instanceof Number)) {
-            fail('dependency snapshot javaVersion must be an integer')
+        Map policies = table(raw, 'policies')
+        Integer javaToolchain = null
+        Object javaNode = policies.get('java')
+        if (javaNode != null) {
+            Map javaPolicy = entry(javaNode, "policy 'java'")
+            javaToolchain = requiredInteger(javaPolicy, 'toolchain', "policy 'java'")
         }
 
         Map platformsRaw = table(raw, 'platforms')
@@ -64,34 +67,34 @@ final class SimpleDslRegistryBridge {
 
         Map<String, CatalogPlatform> platforms = new LinkedHashMap<>()
         platformsRaw.each { alias, node ->
-            Map entry = entry(node, "platform '${alias}'")
+            Map item = entry(node, "platform '${alias}'")
             platforms.put(alias as String, new CatalogPlatform(
                     alias as String,
-                    requiredString(entry, 'module', "platform '${alias}'"),
-                    requiredString(entry, 'version', "platform '${alias}'")))
+                    requiredString(item, 'module', "platform '${alias}'"),
+                    requiredString(item, 'version', "platform '${alias}'")))
         }
 
         Map<String, CatalogLibrary> libraries = new LinkedHashMap<>()
         librariesRaw.each { alias, node ->
-            Map entry = entry(node, "library '${alias}'")
+            Map item = entry(node, "library '${alias}'")
             libraries.put(alias as String, new CatalogLibrary(
                     alias as String,
-                    requiredString(entry, 'module', "library '${alias}'"),
-                    optionalString(entry, 'version', "library '${alias}'"),
-                    optionalString(entry, 'platform', "library '${alias}'")))
+                    requiredString(item, 'module', "library '${alias}'"),
+                    optionalString(item, 'version', "library '${alias}'"),
+                    optionalString(item, 'platform', "library '${alias}'")))
         }
 
         Map<String, CatalogPlugin> plugins = new LinkedHashMap<>()
         pluginsRaw.each { alias, node ->
-            Map entry = entry(node, "plugin '${alias}'")
+            Map item = entry(node, "plugin '${alias}'")
             plugins.put(alias as String, new CatalogPlugin(
                     alias as String,
-                    requiredString(entry, 'id', "plugin '${alias}'"),
-                    optionalString(entry, 'module', "plugin '${alias}'"),
-                    requiredString(entry, 'version', "plugin '${alias}'")))
+                    requiredString(item, 'id', "plugin '${alias}'"),
+                    optionalString(item, 'module', "plugin '${alias}'"),
+                    requiredString(item, 'version', "plugin '${alias}'")))
         }
 
-        new DependencyCatalogSnapshot((javaNode as Number).intValue(), platforms, libraries, plugins)
+        new DependencyCatalogSnapshot(javaToolchain, platforms, libraries, plugins)
     }
 
     private static Map table(Map raw, String key) {
@@ -107,6 +110,18 @@ final class SimpleDslRegistryBridge {
             fail("dependency snapshot ${subject} must be a map")
         }
         value as Map
+    }
+
+    private static int requiredInteger(Map entry, String key, String subject) {
+        Object value = entry.get(key)
+        if (!(value instanceof Number)) {
+            fail("dependency snapshot ${subject}.${key} must be an integer")
+        }
+        int result = (value as Number).intValue()
+        if (result <= 0 || (value as Number).longValue() != result) {
+            fail("dependency snapshot ${subject}.${key} must be a positive integer")
+        }
+        result
     }
 
     private static String requiredString(Map entry, String key, String subject) {

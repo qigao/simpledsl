@@ -1,21 +1,21 @@
 package io.github.qigao.simpledsl.gradle.model
 
 import io.github.qigao.simpledsl.gradle.SimpleDslConfigurationException
-import io.github.qigao.simpledsl.gradle.ModuleKind
 import org.gradle.api.provider.Property
 import org.gradle.api.provider.SetProperty
 
 abstract class SimpleDslModuleModel {
-    abstract Property<ModuleKind> getModuleKind()
+    abstract Property<String> getBackendId()
+    abstract Property<String> getModuleType()
     abstract SetProperty<String> getCapabilities()
     abstract SetProperty<String> getPlatformBindings()
 
-    void claim(ModuleKind requested, String projectPath) {
-        if (!moduleKind.isPresent()) {
-            moduleKind.set(requested)
+    void claim(String requested, String projectPath) {
+        if (!moduleType.isPresent()) {
+            moduleType.set(requested)
             return
         }
-        ModuleKind existing = moduleKind.get()
+        String existing = moduleType.get()
         if (existing != requested) {
             throw SimpleDslConfigurationException.moduleTypeConflict(projectPath, existing, requested)
         }

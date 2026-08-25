@@ -18,7 +18,7 @@ final class SimpleDslDoctorValidator {
         Set<String> enabled = new TreeSet<>(model.capabilities.get())
         Set<String> bindings = new TreeSet<>(model.platformBindings.get())
 
-        if (!model.moduleKind.isPresent()) {
+        if (!model.moduleType.isPresent()) {
             violations.add('module type is not selected')
         }
 
@@ -36,23 +36,17 @@ final class SimpleDslDoctorValidator {
             }
 
             if (!spec.allowedModules.isEmpty()) {
-                if (!model.moduleKind.isPresent() || !spec.allowedModules.contains(model.moduleKind.get())) {
-                    violations.add("capability '${capabilityId}' is not allowed for module type ${model.moduleKind.isPresent() ? model.moduleKind.get() : 'NONE'}")
+                if (!model.moduleType.isPresent() || !spec.allowedModules.contains(model.moduleType.get())) {
+                    violations.add("capability '${capabilityId}' is not allowed for module type ${model.moduleType.isPresent() ? model.moduleType.get() : 'NONE'}")
                 }
             }
 
             spec.requires.each { required ->
-                if (!enabled.contains(required)) {
-                    violations.add("capability '${capabilityId}' requires '${required}'")
-                }
+                if (!enabled.contains(required)) violations.add("capability '${capabilityId}' requires '${required}'")
             }
-
             spec.conflicts.each { conflict ->
-                if (enabled.contains(conflict)) {
-                    violations.add("capability '${capabilityId}' conflicts with '${conflict}'")
-                }
+                if (enabled.contains(conflict)) violations.add("capability '${capabilityId}' conflicts with '${conflict}'")
             }
-
             spec.dependencies.each { dependency ->
                 CatalogLibrary library = catalog.libraries().find { it.alias == dependency.libraryAlias }
                 if (library == null) {
@@ -64,10 +58,6 @@ final class SimpleDslDoctorValidator {
                     }
                 }
             }
-
-            // externalPluginIds are implementation plugins owned by the SimpleDSL
-            // release. They are intentionally not resolved through the consumer
-            // dependency catalog, so there is no consumer alias to validate here.
         }
 
         Collections.unmodifiableList(new ArrayList<>(violations))

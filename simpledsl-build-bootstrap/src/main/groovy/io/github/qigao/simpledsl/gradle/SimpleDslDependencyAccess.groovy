@@ -8,7 +8,7 @@ import org.gradle.api.Project
 
 final class SimpleDslDependencyAccess {
     static int javaVersion(Project project) {
-        catalog(project).javaVersion()
+        catalog(project).requireJavaToolchain(project.path)
     }
 
     static void activatePlatform(Project project, SimpleDslModuleModel model, String configuration, String platformAlias) {
@@ -27,7 +27,7 @@ final class SimpleDslDependencyAccess {
         DependencyCatalogSnapshot catalog = project.extensions.findByType(DependencyCatalogSnapshot)
         if (catalog == null) {
             throw new GradleException(
-                    'SimpleDSL dependency catalog error\nProblem: simpledslDependencyCatalog is not available; apply io.github.qigao.simpledsl.module')
+                    'SimpleDSL dependency catalog error\nProblem: simpledslDependencyCatalog is not available; apply a SimpleDSL project backend')
         }
         catalog
     }

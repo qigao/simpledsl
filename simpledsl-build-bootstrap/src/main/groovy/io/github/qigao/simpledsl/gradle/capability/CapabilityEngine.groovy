@@ -28,14 +28,10 @@ final class CapabilityEngine {
     }
 
     synchronized void enable(String capabilityId) {
-        if (model.capabilities.get().contains(capabilityId)) {
-            return
-        }
+        if (model.capabilities.get().contains(capabilityId)) return
 
         CapabilitySpec spec = registry.get(capabilityId)
-        if (spec == null) {
-            fail(capabilityId, "capability '${capabilityId}' is not registered")
-        }
+        if (spec == null) fail(capabilityId, "capability '${capabilityId}' is not registered")
 
         if (activationStack.contains(capabilityId)) {
             List<String> cycle = new ArrayList<>(activationStack)
@@ -56,17 +52,11 @@ final class CapabilityEngine {
                 }
                 enable(requiredId)
             }
-
             validateConflicts(spec)
-
-            spec.externalPluginIds.each { pluginId ->
-                project.pluginManager.apply(pluginId)
-            }
-
+            spec.externalPluginIds.each { pluginId -> project.pluginManager.apply(pluginId) }
             spec.dependencies.each { binding ->
                 DependencyBridge.add(project, model, binding.configuration, binding.libraryAlias)
             }
-
             model.enableCapability(capabilityId)
         } finally {
             activationStack.removeLastOccurrence(capabilityId)
@@ -75,11 +65,10 @@ final class CapabilityEngine {
 
     private void validateModule(CapabilitySpec spec) {
         if (spec.allowedModules.isEmpty()) return
-        if (!model.moduleKind.isPresent()) {
-            fail(spec.id,
-                    "capability '${spec.id}' requires a module type; allowed: ${spec.allowedModules.join(',')}")
+        if (!model.moduleType.isPresent()) {
+            fail(spec.id, "capability '${spec.id}' requires a module type; allowed: ${spec.allowedModules.join(',')}")
         }
-        def current = model.moduleKind.get()
+        String current = model.moduleType.get()
         if (!spec.allowedModules.contains(current)) {
             throw new SimpleDslConfigurationException(
                     'SimpleDSL configuration error\n' +
@@ -94,9 +83,7 @@ final class CapabilityEngine {
     private void validateConflicts(CapabilitySpec requested) {
         Set<String> active = model.capabilities.get()
         requested.conflicts.each { conflictId ->
-            if (active.contains(conflictId)) {
-                conflict(requested.id, conflictId)
-            }
+            if (active.contains(conflictId)) conflict(requested.id, conflictId)
         }
         active.each { activeId ->
             CapabilitySpec activeSpec = registry.get(activeId)

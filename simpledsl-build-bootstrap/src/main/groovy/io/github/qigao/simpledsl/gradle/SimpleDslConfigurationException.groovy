@@ -13,8 +13,8 @@ class SimpleDslConfigurationException extends GradleException {
 
     static SimpleDslConfigurationException moduleTypeConflict(
             String projectPath,
-            ModuleKind existing,
-            ModuleKind requested) {
+            String existing,
+            String requested) {
         new SimpleDslConfigurationException(
                 'SimpleDSL configuration error\n' +
                 "Project: ${projectPath}\n" +

@@ -3,18 +3,18 @@ package io.github.qigao.simpledsl.gradle.catalog
 import org.gradle.api.GradleException
 
 final class DependencyCatalogSnapshot {
-    private final int javaVersion
+    private final Integer javaToolchain
     private final Map<String, CatalogPlatform> platforms
     private final Map<String, CatalogLibrary> libraries
     private final Map<String, CatalogPlugin> plugins
     private final Map<String, CatalogPlugin> pluginsByGradleId
 
     DependencyCatalogSnapshot(
-            int javaVersion,
+            Integer javaToolchain,
             Map<String, CatalogPlatform> platforms,
             Map<String, CatalogLibrary> libraries,
             Map<String, CatalogPlugin> plugins) {
-        this.javaVersion = javaVersion
+        this.javaToolchain = javaToolchain
         this.platforms = Collections.unmodifiableMap(new LinkedHashMap<>(platforms))
         this.libraries = Collections.unmodifiableMap(new LinkedHashMap<>(libraries))
         this.plugins = Collections.unmodifiableMap(new LinkedHashMap<>(plugins))
@@ -30,7 +30,19 @@ final class DependencyCatalogSnapshot {
         this.pluginsByGradleId = Collections.unmodifiableMap(byGradleId)
     }
 
-    int javaVersion() { javaVersion }
+    Integer javaToolchainOrNull() { javaToolchain }
+
+    int requireJavaToolchain(String projectPath) {
+        if (javaToolchain == null) {
+            throw new GradleException(
+                    'SimpleDSL configuration error\n' +
+                    "Project: ${projectPath}\n" +
+                    'Problem: Java backend requires simpledsl.java in the dependency manifest')
+        }
+        javaToolchain
+    }
+
+    int javaVersion() { requireJavaToolchain(':') }
 
     CatalogPlatform platform(String alias) {
         required(platforms, 'platform', alias)

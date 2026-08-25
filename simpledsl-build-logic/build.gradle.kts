@@ -16,6 +16,7 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 dependencies {
+    implementation(project(":simpledsl-build-bootstrap"))
     implementation(localGroovy())
     implementation(libs.spring.boot.gradle)
     implementation(libs.graalvm.native.gradle)
