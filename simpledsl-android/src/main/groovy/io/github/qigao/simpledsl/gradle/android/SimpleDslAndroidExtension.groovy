@@ -1,7 +1,10 @@
 package io.github.qigao.simpledsl.gradle.android
 
+import io.github.qigao.simpledsl.gradle.android.capability.BuiltinAndroidCapabilities
+import io.github.qigao.simpledsl.gradle.android.capability.ComposeCapabilityConfigurer
 import io.github.qigao.simpledsl.gradle.android.module.SimpleDslAndroidApplicationPlugin
 import io.github.qigao.simpledsl.gradle.android.module.SimpleDslAndroidLibraryPlugin
+import io.github.qigao.simpledsl.gradle.capability.CapabilityEngine
 import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
 import org.gradle.api.Action
 import org.gradle.api.GradleException
@@ -38,6 +41,15 @@ class SimpleDslAndroidExtension {
         SimpleDslAndroidLibrarySpec spec = createLibrarySpec()
         configure(spec, closure)
         project.pluginManager.apply(SimpleDslAndroidLibraryPlugin)
+    }
+
+    void capability(String capabilityId) {
+        project.extensions.getByType(CapabilityEngine).enable(capabilityId)
+    }
+
+    void compose() {
+        capability(BuiltinAndroidCapabilities.COMPOSE.id)
+        ComposeCapabilityConfigurer.configure(project)
     }
 
     private SimpleDslAndroidApplicationSpec createApplicationSpec() {

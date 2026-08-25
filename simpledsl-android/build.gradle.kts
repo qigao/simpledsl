@@ -21,6 +21,7 @@ dependencies {
     implementation(project(":simpledsl-core"))
     implementation(localGroovy())
     implementation(libs.android.gradle)
+    implementation(libs.compose.compiler.gradle)
     testImplementation(gradleTestKit())
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

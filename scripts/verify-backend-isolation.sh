@@ -62,18 +62,21 @@ java_tooling=(
   'org.jooq:jooq-codegen-gradle'
   'org.jsonschema2pojo:jsonschema2pojo-gradle-plugin'
 )
+compose_compiler_tooling='org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin'
 
-for coordinate in "${java_tooling[@]}" 'com.android.tools.build:gradle'; do
+for coordinate in "${java_tooling[@]}" 'com.android.tools.build:gradle' "$compose_compiler_tooling"; do
   if contains_coordinate "$core_dependencies" "$coordinate"; then
     echo "SimpleDSL core dependency isolation violation: ${coordinate}" >&2
     exit 1
   fi
 done
 
-if contains_coordinate "$java_dependencies" 'com.android.tools.build:gradle'; then
-  echo 'SimpleDSL Java dependency isolation violation: com.android.tools.build:gradle' >&2
-  exit 1
-fi
+for coordinate in 'com.android.tools.build:gradle' "$compose_compiler_tooling"; do
+  if contains_coordinate "$java_dependencies" "$coordinate"; then
+    echo "SimpleDSL Java dependency isolation violation: ${coordinate}" >&2
+    exit 1
+  fi
+done
 if contains_coordinate "$java_dependencies" 'io.github.qigao.simpledsl:simpledsl-android'; then
   echo 'SimpleDSL Java dependency isolation violation: simpledsl-android' >&2
   exit 1
@@ -108,6 +111,13 @@ fi
 required_agp='com.android.tools.build:gradle'
 if ! contains_coordinate "$android_dependencies" "$required_agp"; then
   echo "SimpleDSL Android publication must depend on ${required_agp}" >&2
+  echo 'Actual Android dependencies:' >&2
+  printf '%s\n' "$android_dependencies" >&2
+  exit 1
+fi
+
+if ! contains_coordinate "$android_dependencies" "$compose_compiler_tooling"; then
+  echo "SimpleDSL Android publication must depend on ${compose_compiler_tooling}" >&2
   echo 'Actual Android dependencies:' >&2
   printf '%s\n' "$android_dependencies" >&2
   exit 1
