@@ -3,14 +3,32 @@ package io.github.qigao.simpledsl.gradle.manifest
 import org.gradle.api.GradleException
 
 final class DependencyRegistry {
-    static final int SNAPSHOT_SCHEMA_VERSION = 1
+    static final int SNAPSHOT_SCHEMA_VERSION = 2
 
-    private final int javaVersion
+    private final Integer javaVersion
+    private final AndroidPolicy androidPolicy
     private final Map<String, VersionSpec> versions
     private final Map<String, PlatformSpec> platforms
     private final Map<String, LibrarySpec> libraries
     private final Map<String, PluginSpec> plugins
     private final Map<String, PluginSpec> pluginsByGradleId
+
+    DependencyRegistry(
+            Integer javaVersion,
+            AndroidPolicy androidPolicy,
+            Map<String, VersionSpec> versions,
+            Map<String, PlatformSpec> platforms,
+            Map<String, LibrarySpec> libraries,
+            Map<String, PluginSpec> plugins,
+            Map<String, PluginSpec> pluginsByGradleId) {
+        this.javaVersion = javaVersion
+        this.androidPolicy = androidPolicy
+        this.versions = Collections.unmodifiableMap(new LinkedHashMap<>(versions))
+        this.platforms = Collections.unmodifiableMap(new LinkedHashMap<>(platforms))
+        this.libraries = Collections.unmodifiableMap(new LinkedHashMap<>(libraries))
+        this.plugins = Collections.unmodifiableMap(new LinkedHashMap<>(plugins))
+        this.pluginsByGradleId = Collections.unmodifiableMap(new LinkedHashMap<>(pluginsByGradleId))
+    }
 
     DependencyRegistry(
             int javaVersion,
@@ -19,15 +37,19 @@ final class DependencyRegistry {
             Map<String, LibrarySpec> libraries,
             Map<String, PluginSpec> plugins,
             Map<String, PluginSpec> pluginsByGradleId) {
-        this.javaVersion = javaVersion
-        this.versions = Collections.unmodifiableMap(new LinkedHashMap<>(versions))
-        this.platforms = Collections.unmodifiableMap(new LinkedHashMap<>(platforms))
-        this.libraries = Collections.unmodifiableMap(new LinkedHashMap<>(libraries))
-        this.plugins = Collections.unmodifiableMap(new LinkedHashMap<>(plugins))
-        this.pluginsByGradleId = Collections.unmodifiableMap(new LinkedHashMap<>(pluginsByGradleId))
+        this(javaVersion as Integer, null, versions, platforms, libraries, plugins, pluginsByGradleId)
     }
 
-    int javaVersion() { javaVersion }
+    int javaVersion() {
+        if (javaVersion == null) {
+            throw new GradleException('SimpleDSL dependency manifest error\nProblem: Java policy is not configured')
+        }
+        javaVersion
+    }
+
+    Integer javaVersionOrNull() { javaVersion }
+
+    AndroidPolicy androidPolicy() { androidPolicy }
 
     VersionSpec version(String id) {
         required(versions, 'version', id)
@@ -54,9 +76,17 @@ final class DependencyRegistry {
     }
 
     Map<String, Object> snapshot() {
+        Map<String, Object> policies = new LinkedHashMap<>()
+        if (javaVersion != null) {
+            policies.java = [toolchain: javaVersion]
+        }
+        if (androidPolicy != null) {
+            policies.android = androidPolicy.snapshot()
+        }
+
         deepFreeze([
                 schemaVersion: SNAPSHOT_SCHEMA_VERSION,
-                javaVersion: javaVersion,
+                policies: policies,
                 platforms: platforms.collectEntries { alias, platform ->
                     [(alias): [
                             module: platform.module,
@@ -86,7 +116,7 @@ final class DependencyRegistry {
             (value as Map).each { key, nested ->
                 if (!(key instanceof String)) {
                     throw new GradleException(
-                            "SimpleDSL bootstrap error\nProblem: dependency snapshot map key must be a String")
+                            'SimpleDSL bootstrap error\nProblem: dependency snapshot map key must be a String')
                 }
                 copy.put(key, deepFreeze(nested))
             }

@@ -9,10 +9,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue
 
 class SimpleDslRegistryBridgeTest {
     @Test
-    void acceptsSchemaOneSnapshot() {
+    void acceptsSchemaTwoSnapshot() {
         def snapshot = SimpleDslRegistryBridge.fromSnapshot([
-            schemaVersion: 1,
-            javaVersion: 25,
+            schemaVersion: 2,
+            policies: [java: [toolchain: 25]],
             platforms: [spring: [module: 'org.springframework.boot:spring-boot-dependencies', version: '4.1.0']],
             libraries: [core: [module: 'org.springframework.boot:spring-boot-starter', platform: 'spring']],
             plugins: [springBoot: [id: 'org.springframework.boot', module: 'org.springframework.boot:spring-boot-gradle-plugin', version: '4.1.0']]
@@ -29,7 +29,7 @@ class SimpleDslRegistryBridgeTest {
         def error = assertThrows(GradleException) {
             SimpleDslRegistryBridge.fromSnapshot([
                 schemaVersion: 99,
-                javaVersion: 25,
+                policies: [:],
                 platforms: [:],
                 libraries: [:],
                 plugins: [:]
@@ -38,7 +38,7 @@ class SimpleDslRegistryBridgeTest {
 
         assertTrue(error.message.contains('SimpleDSL bootstrap error'))
         assertTrue(error.message.contains('Problem: unsupported dependency snapshot schema'))
-        assertTrue(error.message.contains('Expected: 1'))
+        assertTrue(error.message.contains('Expected: 2'))
         assertTrue(error.message.contains('Actual: 99'))
     }
 }

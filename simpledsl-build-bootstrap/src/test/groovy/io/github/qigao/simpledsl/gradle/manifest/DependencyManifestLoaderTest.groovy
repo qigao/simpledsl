@@ -52,7 +52,7 @@ version.ref = "spring-boot"
         assertEquals('4.1.0', registry.plugin('spring-boot').version)
         assertTrue(registry.snapshot().platforms.containsKey('spring-bom'))
         assertTrue(registry.snapshot().libraries.containsKey('spring-bom'))
-        assertEquals(1, registry.snapshot().schemaVersion)
+        assertEquals(2, registry.snapshot().schemaVersion)
     }
 
     @Test

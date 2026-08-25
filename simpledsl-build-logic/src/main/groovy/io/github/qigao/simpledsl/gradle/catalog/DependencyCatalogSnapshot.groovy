@@ -3,18 +3,21 @@ package io.github.qigao.simpledsl.gradle.catalog
 import org.gradle.api.GradleException
 
 final class DependencyCatalogSnapshot {
-    private final int javaVersion
+    private final Integer javaVersion
+    private final CatalogAndroidPolicy androidPolicy
     private final Map<String, CatalogPlatform> platforms
     private final Map<String, CatalogLibrary> libraries
     private final Map<String, CatalogPlugin> plugins
     private final Map<String, CatalogPlugin> pluginsByGradleId
 
     DependencyCatalogSnapshot(
-            int javaVersion,
+            Integer javaVersion,
+            CatalogAndroidPolicy androidPolicy,
             Map<String, CatalogPlatform> platforms,
             Map<String, CatalogLibrary> libraries,
             Map<String, CatalogPlugin> plugins) {
         this.javaVersion = javaVersion
+        this.androidPolicy = androidPolicy
         this.platforms = Collections.unmodifiableMap(new LinkedHashMap<>(platforms))
         this.libraries = Collections.unmodifiableMap(new LinkedHashMap<>(libraries))
         this.plugins = Collections.unmodifiableMap(new LinkedHashMap<>(plugins))
@@ -30,7 +33,24 @@ final class DependencyCatalogSnapshot {
         this.pluginsByGradleId = Collections.unmodifiableMap(byGradleId)
     }
 
-    int javaVersion() { javaVersion }
+    DependencyCatalogSnapshot(
+            int javaVersion,
+            Map<String, CatalogPlatform> platforms,
+            Map<String, CatalogLibrary> libraries,
+            Map<String, CatalogPlugin> plugins) {
+        this(javaVersion as Integer, null, platforms, libraries, plugins)
+    }
+
+    int javaVersion() {
+        if (javaVersion == null) {
+            throw new GradleException('SimpleDSL dependency catalog error\nProblem: Java policy is not configured')
+        }
+        javaVersion
+    }
+
+    Integer javaVersionOrNull() { javaVersion }
+
+    CatalogAndroidPolicy androidPolicy() { androidPolicy }
 
     CatalogPlatform platform(String alias) {
         required(platforms, 'platform', alias)

@@ -14,9 +14,6 @@ final class DependencyManifestLoader {
     static DependencyRegistry load(File rootManifest) {
         State state = new State()
         loadFile(rootManifest.canonicalFile, state, new LinkedHashSet<File>())
-        if (state.javaVersion == null) {
-            fail(rootManifest, null, null, 'missing simpledsl.java')
-        }
 
         Map<String, VersionSpec> versions = new LinkedHashMap<>()
         state.versionValues.each { id, raw ->
@@ -103,7 +100,14 @@ final class DependencyManifestLoader {
             plugins.put(alias, spec)
         }
 
-        new DependencyRegistry(state.javaVersion as int, versions, platforms, libraries, plugins, pluginsByGradleId)
+        new DependencyRegistry(
+                state.javaVersion,
+                state.androidPolicy,
+                versions,
+                platforms,
+                libraries,
+                plugins,
+                pluginsByGradleId)
     }
 
     private static void loadFile(File file, State state, LinkedHashSet<File> stack) {
@@ -137,25 +141,71 @@ final class DependencyManifestLoader {
             }
         }
 
-        Map simpleDsl = optionalTable(parsed, 'simpledsl', canonical, 'SimpleDSL', 'simpledsl')
-        if (simpleDsl != null) {
-            rejectUnknownKeys(simpleDsl.keySet() as Set<String>, ['java'] as Set, canonical, 'SimpleDSL', 'simpledsl')
-            Object javaNode = simpleDsl.get('java')
-            if (!isInteger(javaNode)) {
-                fail(canonical, 'SimpleDSL', 'simpledsl', 'java must be an integer')
-            }
-            if (state.javaVersion != null) {
-                fail(canonical, 'SimpleDSL', 'simpledsl', 'duplicate simpledsl.java')
-            }
-            state.javaVersion = (javaNode as Number).intValue()
-        }
-
+        parseSimpleDslPolicy(optionalTable(parsed, 'simpledsl', canonical, 'SimpleDSL', 'simpledsl'), canonical, state)
         parseVersions(optionalTable(parsed, 'versions', canonical, 'Versions', 'versions'), canonical, state)
         parseLibraries(optionalTable(parsed, 'libraries', canonical, 'Libraries', 'libraries'), canonical, state)
         parsePlugins(optionalTable(parsed, 'plugins', canonical, 'Plugins', 'plugins'), canonical, state)
 
         stack.remove(canonical)
         state.loaded.add(canonical)
+    }
+
+    private static void parseSimpleDslPolicy(Map simpleDsl, File file, State state) {
+        if (simpleDsl == null) return
+
+        rejectUnknownKeys(
+                simpleDsl.keySet() as Set<String>,
+                ['java', 'android'] as Set,
+                file,
+                'SimpleDSL',
+                'simpledsl')
+
+        if (simpleDsl.containsKey('java')) {
+            if (state.javaVersion != null) {
+                fail(file, 'SimpleDSL', 'simpledsl', 'duplicate simpledsl.java')
+            }
+            state.javaVersion = requirePositiveInteger(
+                    simpleDsl.get('java'),
+                    'java',
+                    file,
+                    'SimpleDSL',
+                    'simpledsl')
+        }
+
+        if (simpleDsl.containsKey('android')) {
+            if (state.androidPolicy != null) {
+                fail(file, 'SimpleDSL', 'simpledsl.android', 'duplicate simpledsl.android')
+            }
+
+            Map android = requireTableNode(
+                    simpleDsl.get('android'),
+                    file,
+                    'SimpleDSL',
+                    'simpledsl.android')
+            rejectUnknownKeys(
+                    android.keySet() as Set<String>,
+                    ['java', 'compile-sdk', 'min-sdk', 'target-sdk'] as Set,
+                    file,
+                    'SimpleDSL',
+                    'simpledsl.android')
+
+            int javaVersion = requirePositiveInteger(
+                    android.get('java'), 'java', file, 'SimpleDSL', 'simpledsl.android')
+            int compileSdk = requirePositiveInteger(
+                    android.get('compile-sdk'), 'compile-sdk', file, 'SimpleDSL', 'simpledsl.android')
+            int minSdk = requirePositiveInteger(
+                    android.get('min-sdk'), 'min-sdk', file, 'SimpleDSL', 'simpledsl.android')
+            Integer targetSdk = android.containsKey('target-sdk')
+                    ? requirePositiveInteger(
+                            android.get('target-sdk'), 'target-sdk', file, 'SimpleDSL', 'simpledsl.android')
+                    : null
+
+            try {
+                state.androidPolicy = new AndroidPolicy(javaVersion, compileSdk, minSdk, targetSdk)
+            } catch (IllegalArgumentException error) {
+                fail(file, 'SimpleDSL', 'simpledsl.android', error.message)
+            }
+        }
     }
 
     private static Map<String, Object> readManifest(File file) {
@@ -322,6 +372,25 @@ final class DependencyManifestLoader {
         value as String
     }
 
+    private static int requirePositiveInteger(
+            Object value,
+            String key,
+            File file,
+            String kind,
+            String id) {
+        if (!isInteger(value)) {
+            fail(file, kind, id, "${key} must be an integer")
+        }
+        BigInteger integer = new BigInteger(value.toString())
+        if (integer <= BigInteger.ZERO) {
+            fail(file, kind, id, "${key} must be a positive integer")
+        }
+        if (integer > BigInteger.valueOf(Integer.MAX_VALUE)) {
+            fail(file, kind, id, "${key} exceeds supported integer range")
+        }
+        integer.intValue()
+    }
+
     private static boolean isInteger(Object value) {
         value instanceof Byte ||
                 value instanceof Short ||
@@ -371,6 +440,7 @@ final class DependencyManifestLoader {
 
     private static final class State {
         Integer javaVersion
+        AndroidPolicy androidPolicy
         final Set<File> loaded = new LinkedHashSet<>()
         final Map<String, Map> versionValues = new LinkedHashMap<>()
         final Map<String, Map> libraryValues = new LinkedHashMap<>()

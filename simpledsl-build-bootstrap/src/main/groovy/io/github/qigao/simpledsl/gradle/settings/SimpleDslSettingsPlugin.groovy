@@ -74,7 +74,6 @@ class SimpleDslSettingsPlugin implements Plugin<Settings> {
                 spec.parameters.manifestFile.fileValue(manifestFile)
             }
             serviceHolder.provider = serviceProvider
-            serviceProvider.get().javaVersion()
 
             Map<String, Object> snapshot = serviceProvider.get().snapshot()
             validateOwnedPluginDeclarations(snapshot)
@@ -108,11 +107,16 @@ class SimpleDslSettingsPlugin implements Plugin<Settings> {
                 "${entry.gradlePath} | ${entry.relativeDirectory} | ${entry.source} | ${entry.buildFile}"
             }.sort()
 
+            Map policies = snapshot.policies as Map
+            Map javaPolicy = policies.get('java') as Map
+
             settings.gradle.rootProject { root ->
                 root.tasks.register('simpledslDependencies', SimpleDslDependenciesTask) { task ->
                     task.group = 'SimpleDSL'
                     task.description = 'Print SimpleDSL dependency manifest diagnostics.'
-                    task.javaVersion.set(snapshot.javaVersion as Integer)
+                    if (javaPolicy != null) {
+                        task.javaVersion.set(javaPolicy.toolchain as Integer)
+                    }
                     task.platformLines.set(platformLines)
                     task.pluginLines.set(pluginLines)
                     task.libraryLines.set(libraryLines)

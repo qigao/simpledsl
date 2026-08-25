@@ -7,7 +7,7 @@ import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 
 final class SimpleDslRegistryBridge {
-    static final int EXPECTED_SCHEMA_VERSION = 1
+    static final int EXPECTED_SCHEMA_VERSION = 2
 
     static DependencyCatalogSnapshot fromProject(Project project) {
         def registration = project.gradle.sharedServices.registrations.findByName('simpledslDependencyRegistry')
@@ -53,9 +53,22 @@ final class SimpleDslRegistryBridge {
                     "Actual: ${actualSchema}")
         }
 
-        Object javaNode = raw.get('javaVersion')
-        if (!(javaNode instanceof Number)) {
-            fail('dependency snapshot javaVersion must be an integer')
+        Map policiesRaw = table(raw, 'policies')
+        Integer javaVersion = null
+        CatalogAndroidPolicy androidPolicy = null
+
+        if (policiesRaw.containsKey('java')) {
+            Map javaPolicy = entry(policiesRaw.get('java'), "policy 'java'")
+            javaVersion = requiredInteger(javaPolicy, 'toolchain', "policy 'java'")
+        }
+
+        if (policiesRaw.containsKey('android')) {
+            Map android = entry(policiesRaw.get('android'), "policy 'android'")
+            int javaTarget = requiredInteger(android, 'java', "policy 'android'")
+            int compileSdk = requiredInteger(android, 'compileSdk', "policy 'android'")
+            int minSdk = requiredInteger(android, 'minSdk', "policy 'android'")
+            Integer targetSdk = optionalInteger(android, 'targetSdk', "policy 'android'")
+            androidPolicy = new CatalogAndroidPolicy(javaTarget, compileSdk, minSdk, targetSdk)
         }
 
         Map platformsRaw = table(raw, 'platforms')
@@ -91,7 +104,7 @@ final class SimpleDslRegistryBridge {
                     requiredString(entry, 'version', "plugin '${alias}'")))
         }
 
-        new DependencyCatalogSnapshot((javaNode as Number).intValue(), platforms, libraries, plugins)
+        new DependencyCatalogSnapshot(javaVersion, androidPolicy, platforms, libraries, plugins)
     }
 
     private static Map table(Map raw, String key) {
@@ -124,6 +137,40 @@ final class SimpleDslRegistryBridge {
             fail("dependency snapshot ${subject}.${key} must be a non-empty string when present")
         }
         value as String
+    }
+
+    private static int requiredInteger(Map entry, String key, String subject) {
+        Object value = entry.get(key)
+        Integer parsed = integerOrNull(value)
+        if (parsed == null) {
+            fail("dependency snapshot ${subject}.${key} must be an integer")
+        }
+        parsed
+    }
+
+    private static Integer optionalInteger(Map entry, String key, String subject) {
+        if (!entry.containsKey(key)) return null
+        Object value = entry.get(key)
+        Integer parsed = integerOrNull(value)
+        if (parsed == null) {
+            fail("dependency snapshot ${subject}.${key} must be an integer when present")
+        }
+        parsed
+    }
+
+    private static Integer integerOrNull(Object value) {
+        if (!(value instanceof Byte ||
+                value instanceof Short ||
+                value instanceof Integer ||
+                value instanceof Long ||
+                value instanceof BigInteger)) {
+            return null
+        }
+        BigInteger integer = new BigInteger(value.toString())
+        if (integer < BigInteger.valueOf(Integer.MIN_VALUE) || integer > BigInteger.valueOf(Integer.MAX_VALUE)) {
+            return null
+        }
+        integer.intValue()
     }
 
     private static void fail(String problem, Throwable cause = null) {
