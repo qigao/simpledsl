@@ -32,7 +32,7 @@ assert !pluginManager.hasPlugin('org.jetbrains.kotlin.android')
 
 def androidDsl = extensions.getByName('android')
 def androidComponents = extensions.getByName('androidComponents')
-androidComponents.onVariants { variant ->
+androidComponents.onVariants(androidComponents.selector().all()) { variant ->
     assert androidDsl.namespace == 'example.app'
     assert androidDsl.compileSdk == 36
     assert androidDsl.defaultConfig.minSdk == 24
@@ -64,7 +64,7 @@ assert !pluginManager.hasPlugin('org.jetbrains.kotlin.android')
 
 def androidDsl = extensions.getByName('android')
 def androidComponents = extensions.getByName('androidComponents')
-androidComponents.onVariants { variant ->
+androidComponents.onVariants(androidComponents.selector().all()) { variant ->
     assert androidDsl.namespace == 'example.feature'
     assert androidDsl.compileSdk == 36
     assert androidDsl.defaultConfig.minSdk == 24
