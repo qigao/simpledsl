@@ -8,7 +8,7 @@ import groovy.transform.ToString
 @ToString(includeNames = true)
 final class CapabilitySpec {
     final String id
-    final Set<ModuleKind> allowedModules
+    final Set<Object> allowedModules
     final Set<String> requires
     final Set<String> conflicts
     final List<DependencyBinding> dependencies
@@ -16,7 +16,7 @@ final class CapabilitySpec {
 
     private CapabilitySpec(
             String id,
-            Set<ModuleKind> allowedModules,
+            Set<Object> allowedModules,
             Set<String> requires,
             Set<String> conflicts,
             List<DependencyBinding> dependencies,
@@ -37,7 +37,7 @@ final class CapabilitySpec {
 
     static final class Builder {
         private final String id
-        private final Set<ModuleKind> allowedModules = new LinkedHashSet<>()
+        private final Set<Object> allowedModules = new LinkedHashSet<>()
         private final Set<String> requires = new LinkedHashSet<>()
         private final Set<String> conflicts = new LinkedHashSet<>()
         private final List<DependencyBinding> dependencies = []
@@ -52,6 +52,16 @@ final class CapabilitySpec {
 
         Builder allow(ModuleKind... kinds) {
             allowedModules.addAll(Arrays.asList(kinds))
+            this
+        }
+
+        Builder allow(String... moduleTypes) {
+            moduleTypes.each { moduleType ->
+                if (moduleType == null || moduleType.trim().isEmpty()) {
+                    throw new IllegalArgumentException('module type id must be non-empty')
+                }
+                allowedModules.add(moduleType)
+            }
             this
         }
 
