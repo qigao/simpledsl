@@ -24,6 +24,7 @@ class SimpleDslAndroidPluginTest {
 
         SimpleDslModuleModel model = project.extensions.getByType(SimpleDslModuleModel)
         assertEquals('android', model.backendId.get())
+        assertEquals('android', project.extensions.extraProperties.get(SimpleDslBackendGuard.KEY))
 
         def extension = project.extensions.findByName('simpledsl')
         assertNotNull(extension)
@@ -43,10 +44,21 @@ class SimpleDslAndroidPluginTest {
         GradleException error = assertThrows(GradleException) {
             project.pluginManager.apply(androidPluginClass())
         }
+        String diagnostic = causeMessages(error)
 
-        assertTrue(error.message.contains('SimpleDSL backend conflict'))
-        assertTrue(error.message.contains('Already-selected backend: java'))
-        assertTrue(error.message.contains('Requested backend: android'))
+        assertTrue(diagnostic.contains('SimpleDSL backend conflict'))
+        assertTrue(diagnostic.contains('Already-selected backend: java'))
+        assertTrue(diagnostic.contains('Requested backend: android'))
+    }
+
+    private static String causeMessages(Throwable error) {
+        List<String> messages = []
+        Throwable current = error
+        while (current != null) {
+            if (current.message != null) messages.add(current.message)
+            current = current.cause
+        }
+        messages.join('\n')
     }
 
     private static Class<? extends Plugin> androidPluginClass() {
