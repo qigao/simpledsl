@@ -148,16 +148,22 @@ java plugin id
 android plugin id
 ```
 
-The Java backend continues to own the third-party plugin versions it actively applies.
+Because plugin resolution happens in Settings before a project backend is applied, `simpledsl-core` also owns compatibility metadata for external plugins that SimpleDSL manages: plugin IDs, module coordinates, and the versions compatible with the current SimpleDSL release. This is metadata only and must not create implementation dependencies in the core POM.
 
-For the initial Android baseline, SimpleDSL owns the compatible Android Gradle Plugin version and maps both:
+The actual build-system implementation dependencies remain backend-owned:
+
+- `simpledsl-java` carries the Spring Boot, GraalVM, jOOQ, and jsonschema2pojo implementation dependencies it needs;
+- `simpledsl-android` carries the AGP implementation dependency;
+- `simpledsl-core` carries neither set.
+
+For the initial Android baseline, SimpleDSL pins Android Gradle Plugin `9.0.1` and maps both:
 
 ```text
 com.android.application
 com.android.library
 ```
 
-to the AGP module. A consumer that explicitly requests a conflicting AGP version fails rather than silently creating an unsupported SimpleDSL/AGP combination.
+to the AGP module through settings-side compatibility metadata. A consumer that explicitly requests a conflicting AGP version fails rather than silently creating an unsupported SimpleDSL/AGP combination.
 
 ## Core project model
 
@@ -188,6 +194,10 @@ backend: android
 `CapabilitySpec.allowedModules` becomes a set of module-type IDs rather than a set of Java-specific enum values.
 
 The core does not register built-in product capabilities. The Java backend registers Java/Spring capabilities. Android capabilities are registered only by the Android backend.
+
+An internal `SimpleDslProjectCorePlugin` initializes this common project model, snapshot/catalog bridge, capability infrastructure, backend guard, and common diagnostics. It has no public Plugin Portal marker and is applied by class from the Java or Android backend implementation.
+
+The core does not create the public `simpledsl` extension; the selected backend creates its backend-specific extension after claiming the project.
 
 ## Backend guard
 
@@ -294,20 +304,28 @@ simpledsl:
 
 A manifest containing only dependency/plugin policy and no backend policy is valid at settings time. Backend application is the point at which required policy is enforced.
 
-Android policy supports exactly:
+Android policy accepts exactly:
 
 ```text
-java
-compile-sdk
-min-sdk
-target-sdk
+java          required
+compile-sdk   required
+min-sdk       required
+target-sdk    optional at settings-load time
 ```
 
-All values are positive integers and must satisfy:
+Present values are positive integers. The common Android policy must satisfy:
+
+```text
+min-sdk <= compile-sdk
+```
+
+When `target-sdk` is present it must also satisfy:
 
 ```text
 min-sdk <= target-sdk <= compile-sdk
 ```
+
+`androidApplication` requires `target-sdk`; `androidLibrary` does not. This allows a library-only Android repository to omit application policy it cannot use.
 
 The foundational implementation uses `compile-sdk = 36` as its verified integration baseline. Backend compatibility checks, rather than the generic TOML/YAML syntax layer, own AGP-specific support constraints.
 
@@ -339,7 +357,7 @@ Conceptual shape:
 ]
 ```
 
-Absent backend policies are omitted from `policies`.
+Absent backend policies and absent optional Android policy values are omitted from `policies`.
 
 `platforms`, `libraries`, and `plugins` keep their 0.2.0 semantics. The public manifest still has no `[platforms]` namespace; internal platforms continue to be derived from library ownership.
 
@@ -377,7 +395,7 @@ Existing `simpledsl.java`, dependency aliases, platform aliases, and Java/Spring
 
 ## Android backend baseline
 
-The first Android backend targets AGP 9.0.x with the repository's Gradle 9.1 baseline. The implementation pins one verified AGP patch release rather than using an open version range.
+The first Android backend pins AGP `9.0.1`, aligned with the repository's Gradle 9.1 baseline.
 
 The Android backend uses only AGP public APIs:
 
@@ -407,7 +425,7 @@ simpledsl {
 
 `namespace` is required. `applicationId` is optional and defaults to `namespace`.
 
-The backend applies `com.android.application`, configures repository-level `compileSdk`, `minSdk`, `targetSdk`, and Java compatibility, and records module type `android-application`.
+The backend applies `com.android.application`, requires Android policy including `target-sdk`, configures repository-level `compileSdk`, `minSdk`, `targetSdk`, and Java compatibility, and records module type `android-application`.
 
 ### Android library
 
@@ -423,9 +441,9 @@ simpledsl {
 }
 ```
 
-`namespace` is required. The backend applies `com.android.library`, configures repository-level `compileSdk`, `minSdk`, and Java compatibility, and records module type `android-library`.
+`namespace` is required. The backend applies `com.android.library`, requires Android policy for `java`, `compile-sdk`, and `min-sdk`, configures those values, and records module type `android-library`.
 
-`targetSdk` is application policy and is not forced onto Android library modules.
+`target-sdk` is application policy and is not forced onto Android library modules.
 
 ### Variant proof surface
 
@@ -451,7 +469,7 @@ The follow-up capability will own:
 - the Compose Compiler Gradle plugin required by the selected Kotlin/Compose baseline;
 - Android-module compatibility validation.
 
-The Compose capability must pin a mutually compatible AGP, Kotlin, compileSdk, Compose Compiler, and Compose BOM baseline. The foundational backend split must not be blocked on the newest Compose release if that release requires a newer compileSdk/AGP combination than the chosen AGP 9.0 baseline.
+The Compose capability must pin a mutually compatible AGP, Kotlin, compileSdk, Compose Compiler, and Compose BOM baseline. The foundational backend split must not be blocked on the newest Compose release if that release requires a newer compileSdk/AGP combination than the chosen AGP 9.0.1 baseline.
 
 ## Integration tests
 
@@ -472,15 +490,17 @@ The current published-consumer test is split into backend-specific suites.
 `integration-tests-android` contains at least one application and one library module and proves:
 
 - an Android-only manifest works without `simpledsl.java`;
+- a library-only Android policy works without `target-sdk`;
 - `androidApplication` and `androidLibrary` configure AGP successfully;
 - `:app:assembleDebug` and a library assemble task succeed;
 - `simpledslAndroidVariants` observes expected variants through Android Components;
 - configuration-cache reuse succeeds;
 - applying both Java and Android backends to one project fails;
 - a conflicting AGP request fails with a SimpleDSL compatibility diagnostic;
+- the Java backend artifact does not resolve AGP as an implementation dependency;
 - the Android backend artifact does not resolve Spring Boot, GraalVM, jOOQ, or jsonschema2pojo implementation dependencies.
 
-The CI environment installs/uses the Android SDK level required by the pinned baseline.
+The CI environment installs/uses Android SDK 36 for the pinned baseline.
 
 ## Publication contract
 
@@ -502,6 +522,7 @@ SimpleDSL fails early and specifically for these cases:
 
 - Java backend applied without `simpledsl.java` policy;
 - Android backend applied without `simpledsl.android` policy;
+- Android application selected without `target-sdk`;
 - Java and Android backends applied to the same project;
 - more than one module type selected within one backend project;
 - Android application/library missing `namespace`;
@@ -526,6 +547,7 @@ Java published-consumer contract
 Android published-consumer contract
 configuration-cache reuse for both backends
 Plugin Portal marker-set verification
+artifact dependency-isolation verification
 wrapper metadata
 ```
 
@@ -548,7 +570,7 @@ Phase A must leave Java behavior green before Android code is introduced.
 ### Phase B: Android foundation
 
 - create `simpledsl-android`;
-- pin the verified AGP 9.0.x patch baseline;
+- pin AGP 9.0.1;
 - implement Android policy parsing and validation;
 - implement `androidApplication` and `androidLibrary`;
 - integrate with public Android Components APIs;
@@ -566,8 +588,8 @@ Room, Hilt, KSP, and other capabilities remain later work.
 The design is successful when a single repository can contain, for example:
 
 ```text
-server/   -> io.github.qigao.simpledsl.java -> Java 25 / Spring
-app/      -> io.github.qigao.simpledsl.android -> Android Java 21 / AGP
+server/   -> io.github.qigao.simpledsl.java    -> Java 25 / Spring
+app/      -> io.github.qigao.simpledsl.android -> Android Java 21 / AGP 9.0.1
 ```
 
 while sharing one root dependency policy, with neither backend artifact carrying the other's build-system dependencies or DSL surface.
