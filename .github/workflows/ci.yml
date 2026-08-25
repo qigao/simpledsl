@@ -38,6 +38,7 @@ jobs:
             verifyProductNamespace \
             :simpledsl-core:check \
             :simpledsl-java:check \
+            :simpledsl-android:check \
             --stacktrace
 
       - name: Verify published Java consumer contract
