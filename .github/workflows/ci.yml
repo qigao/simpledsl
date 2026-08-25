@@ -46,6 +46,7 @@ jobs:
           set -euo pipefail
           gradle \
             publishToTestPluginRepository \
+            verifyBackendIsolation \
             :integration-tests-java:test \
             --stacktrace
 
