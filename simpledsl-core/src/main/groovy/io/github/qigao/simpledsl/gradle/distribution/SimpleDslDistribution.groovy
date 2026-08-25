@@ -2,7 +2,8 @@ package io.github.qigao.simpledsl.gradle.distribution
 
 final class SimpleDslDistribution {
     static final String GROUP = 'io.github.qigao.simpledsl'
-    static final String JAVA_ARTIFACT = 'simpledsl-build-logic'
+    static final String CORE_ARTIFACT = 'simpledsl-core'
+    static final String JAVA_ARTIFACT = 'simpledsl-java'
     static final String SETTINGS_PLUGIN_ID = 'io.github.qigao.simpledsl.settings'
     static final String JAVA_PLUGIN_ID = 'io.github.qigao.simpledsl.java'
     static final String REMOVED_BUILD_PLUGIN_ID = 'io.github.qigao.simpledsl.build'
@@ -25,6 +26,10 @@ final class SimpleDslDistribution {
 
     static String version() {
         required('version')
+    }
+
+    static String coreCoordinate() {
+        "${GROUP}:${CORE_ARTIFACT}:${version()}"
     }
 
     static String javaCoordinate() {

@@ -16,8 +16,8 @@ tasks.register<Exec>("verifyProductNamespace") {
 
 tasks.register("publishToTestPluginRepository") {
     dependsOn(
-        ":simpledsl-build-bootstrap:publishAllPublicationsToTestPluginRepository",
-        ":simpledsl-build-logic:publishAllPublicationsToTestPluginRepository"
+        ":simpledsl-core:publishAllPublicationsToTestPluginRepository",
+        ":simpledsl-java:publishAllPublicationsToTestPluginRepository"
     )
 }
 

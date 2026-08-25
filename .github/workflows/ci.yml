@@ -36,8 +36,8 @@ jobs:
           set -euo pipefail
           gradle \
             verifyProductNamespace \
-            :simpledsl-build-bootstrap:check \
-            :simpledsl-build-logic:check \
+            :simpledsl-core:check \
+            :simpledsl-java:check \
             --stacktrace
 
       - name: Verify published consumer contract
