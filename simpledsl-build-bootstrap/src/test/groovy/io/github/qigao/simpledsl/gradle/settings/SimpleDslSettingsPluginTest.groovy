@@ -117,7 +117,7 @@ version = 25
     }
 
     @Test
-    void resolvesManagedJavaBackendWithoutVersion() {
+    void mapsUnversionedJavaBackendToManagedCoordinate() {
         writeRootManifest('dependencies.toml', '''
 [simpledsl]
 java = 25
@@ -130,8 +130,9 @@ plugins {
 '''.stripIndent())
         writeSettings()
 
-        def result = runner('help').build()
+        def result = runner('help').buildAndFail()
 
+        assertTrue(result.output.contains(SimpleDslDistribution.javaCoordinate()))
         assertFalse(result.output.contains('SimpleDSL version conflict'))
     }
 
