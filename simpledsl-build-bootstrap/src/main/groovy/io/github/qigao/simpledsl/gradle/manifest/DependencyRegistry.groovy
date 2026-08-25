@@ -3,9 +3,9 @@ package io.github.qigao.simpledsl.gradle.manifest
 import org.gradle.api.GradleException
 
 final class DependencyRegistry {
-    static final int SNAPSHOT_SCHEMA_VERSION = 1
+    static final int SNAPSHOT_SCHEMA_VERSION = 2
 
-    private final int javaVersion
+    private final Integer javaVersion
     private final Map<String, VersionSpec> versions
     private final Map<String, PlatformSpec> platforms
     private final Map<String, LibrarySpec> libraries
@@ -13,7 +13,7 @@ final class DependencyRegistry {
     private final Map<String, PluginSpec> pluginsByGradleId
 
     DependencyRegistry(
-            int javaVersion,
+            Integer javaVersion,
             Map<String, VersionSpec> versions,
             Map<String, PlatformSpec> platforms,
             Map<String, LibrarySpec> libraries,
@@ -28,6 +28,8 @@ final class DependencyRegistry {
     }
 
     int javaVersion() { javaVersion }
+
+    Integer javaVersionOrNull() { javaVersion }
 
     VersionSpec version(String id) {
         required(versions, 'version', id)
@@ -54,9 +56,14 @@ final class DependencyRegistry {
     }
 
     Map<String, Object> snapshot() {
+        Map<String, Object> policies = new LinkedHashMap<>()
+        if (javaVersion != null) {
+            policies.put('java', [toolchain: javaVersion])
+        }
+
         deepFreeze([
                 schemaVersion: SNAPSHOT_SCHEMA_VERSION,
-                javaVersion: javaVersion,
+                policies: policies,
                 platforms: platforms.collectEntries { alias, platform ->
                     [(alias): [
                             module: platform.module,
