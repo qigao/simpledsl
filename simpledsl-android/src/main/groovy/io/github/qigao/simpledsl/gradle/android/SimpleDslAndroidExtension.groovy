@@ -45,11 +45,17 @@ class SimpleDslAndroidExtension {
 
     void capability(String capabilityId) {
         project.extensions.getByType(CapabilityEngine).enable(capabilityId)
+        configureBackendCapability(capabilityId)
     }
 
-    void compose() {
+    void jetpackCompose() {
         capability(BuiltinAndroidCapabilities.COMPOSE.id)
-        ComposeCapabilityConfigurer.configure(project)
+    }
+
+    private void configureBackendCapability(String capabilityId) {
+        if (BuiltinAndroidCapabilities.COMPOSE.id == capabilityId) {
+            ComposeCapabilityConfigurer.configure(project)
+        }
     }
 
     private SimpleDslAndroidApplicationSpec createApplicationSpec() {
