@@ -141,6 +141,36 @@ androidComponents.onVariants(androidComponents.selector().all()) { variant ->
     }
 
     @Test
+    void configuresComposeThroughGenericCapabilityEntryPoint() {
+        writeSettings('feature', null)
+        writeModule('feature', androidPluginPrelude() + '''
+
+simpledsl {
+    androidLibrary {
+        namespace = 'example.compose.generic'
+    }
+    capability('compose')
+}
+
+assert pluginManager.hasPlugin('org.jetbrains.kotlin.plugin.compose')
+
+def model = extensions.getByName('simpledslModuleModel')
+assert model.capabilities.get().contains('compose')
+assert model.platformBindings.get().contains('implementation:compose')
+
+def androidDsl = extensions.getByName('android')
+def androidComponents = extensions.getByName('androidComponents')
+androidComponents.onVariants(androidComponents.selector().all()) { variant ->
+    assert androidDsl.buildFeatures.compose
+}
+''')
+
+        BuildResult result = build(':feature:help')
+
+        assertOutputContains(result, 'BUILD SUCCESSFUL')
+    }
+
+    @Test
     void rejectsComposeCapabilityWithoutAndroidModuleType() {
         writeSettings('feature', 36)
         writeModule('feature', androidPluginPrelude() + '''
