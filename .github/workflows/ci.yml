@@ -27,6 +27,14 @@ jobs:
         with:
           gradle-version: '9.1.0'
 
+      - name: Verify Android SDK baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ANDROID_HOME:-}"
+          test -d "$ANDROID_HOME/platforms/android-36"
+          test -d "$ANDROID_HOME/build-tools/36.0.0"
+
       - name: Clean workspace
         run: gradle clean --stacktrace
 
@@ -38,9 +46,10 @@ jobs:
             verifyProductNamespace \
             :simpledsl-core:check \
             :simpledsl-java:check \
+            :simpledsl-android:check \
             --stacktrace
 
-      - name: Verify published Java consumer contract
+      - name: Verify published consumer contracts
         shell: bash
         run: |
           set -euo pipefail
@@ -48,6 +57,7 @@ jobs:
             publishToTestPluginRepository \
             verifyBackendIsolation \
             :integration-tests-java:test \
+            :integration-tests-android:test \
             --stacktrace
 
       - name: Verify wrapper metadata

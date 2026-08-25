@@ -54,16 +54,16 @@ contains_coordinate() {
 
 core_dependencies="$(dependencies_for simpledsl-core)"
 java_dependencies="$(dependencies_for simpledsl-java)"
+android_dependencies="$(dependencies_for simpledsl-android)"
 
-forbidden_core=(
+java_tooling=(
   'org.springframework.boot:spring-boot-gradle-plugin'
   'org.graalvm.buildtools:native-gradle-plugin'
   'org.jooq:jooq-codegen-gradle'
   'org.jsonschema2pojo:jsonschema2pojo-gradle-plugin'
-  'com.android.tools.build:gradle'
 )
 
-for coordinate in "${forbidden_core[@]}"; do
+for coordinate in "${java_tooling[@]}" 'com.android.tools.build:gradle'; do
   if contains_coordinate "$core_dependencies" "$coordinate"; then
     echo "SimpleDSL core dependency isolation violation: ${coordinate}" >&2
     exit 1
@@ -74,12 +74,42 @@ if contains_coordinate "$java_dependencies" 'com.android.tools.build:gradle'; th
   echo 'SimpleDSL Java dependency isolation violation: com.android.tools.build:gradle' >&2
   exit 1
 fi
+if contains_coordinate "$java_dependencies" 'io.github.qigao.simpledsl:simpledsl-android'; then
+  echo 'SimpleDSL Java dependency isolation violation: simpledsl-android' >&2
+  exit 1
+fi
+
+for coordinate in "${java_tooling[@]}"; do
+  if contains_coordinate "$android_dependencies" "$coordinate"; then
+    echo "SimpleDSL Android dependency isolation violation: ${coordinate}" >&2
+    exit 1
+  fi
+done
+if contains_coordinate "$android_dependencies" 'io.github.qigao.simpledsl:simpledsl-java'; then
+  echo 'SimpleDSL Android dependency isolation violation: simpledsl-java' >&2
+  exit 1
+fi
 
 required_core='io.github.qigao.simpledsl:simpledsl-core'
 if ! contains_coordinate "$java_dependencies" "$required_core"; then
   echo "SimpleDSL Java publication must depend on ${required_core}" >&2
   echo 'Actual Java dependencies:' >&2
   printf '%s\n' "$java_dependencies" >&2
+  exit 1
+fi
+
+if ! contains_coordinate "$android_dependencies" "$required_core"; then
+  echo "SimpleDSL Android publication must depend on ${required_core}" >&2
+  echo 'Actual Android dependencies:' >&2
+  printf '%s\n' "$android_dependencies" >&2
+  exit 1
+fi
+
+required_agp='com.android.tools.build:gradle'
+if ! contains_coordinate "$android_dependencies" "$required_agp"; then
+  echo "SimpleDSL Android publication must depend on ${required_agp}" >&2
+  echo 'Actual Android dependencies:' >&2
+  printf '%s\n' "$android_dependencies" >&2
   exit 1
 fi
 

@@ -15,7 +15,8 @@ val testPluginRepository = layout.buildDirectory.dir("test-plugin-repo")
 val publishToTestPluginRepository = tasks.register("publishToTestPluginRepository") {
     dependsOn(
         ":simpledsl-core:publishAllPublicationsToTestPluginRepository",
-        ":simpledsl-java:publishAllPublicationsToTestPluginRepository"
+        ":simpledsl-java:publishAllPublicationsToTestPluginRepository",
+        ":simpledsl-android:publishAllPublicationsToTestPluginRepository"
     )
 }
 

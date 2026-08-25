@@ -1,0 +1,9 @@
+plugins {
+    id 'io.github.qigao.simpledsl.android'
+}
+
+simpledsl {
+    androidApplication {
+        namespace = 'example.app'
+    }
+}

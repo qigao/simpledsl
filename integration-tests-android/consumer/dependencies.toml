@@ -1,0 +1,5 @@
+[simpledsl.android]
+java = 21
+compile-sdk = 36
+min-sdk = 24
+target-sdk = 36

@@ -44,6 +44,62 @@ class SimpleDslRegistryBridgeTest {
     }
 
     @Test
+    void acceptsAndroidPolicyAndDistinguishesApplicationTargetRequirement() {
+        def snapshot = SimpleDslRegistryBridge.fromSnapshot([
+            schemaVersion: 2,
+            policies: [android: [java: 21, compileSdk: 36, minSdk: 24]],
+            platforms: [:],
+            libraries: [:],
+            plugins: [:]
+        ])
+
+        def policy = snapshot.requireAndroidPolicy(':feature', false)
+        assertEquals(21, policy.javaVersion)
+        assertEquals(36, policy.compileSdk)
+        assertEquals(24, policy.minSdk)
+        assertNull(policy.targetSdk)
+
+        GradleException error = assertThrows(GradleException) {
+            snapshot.requireAndroidPolicy(':app', true)
+        }
+        assertTrue(error.message.contains('Project: :app'))
+        assertTrue(error.message.contains('simpledsl.android.target-sdk'))
+    }
+
+    @Test
+    void requiresAndroidPolicyOnlyWhenAndroidBackendRequestsIt() {
+        def snapshot = SimpleDslRegistryBridge.fromSnapshot([
+            schemaVersion: 2,
+            policies: [:],
+            platforms: [:],
+            libraries: [:],
+            plugins: [:]
+        ])
+
+        assertNull(snapshot.androidPolicyOrNull())
+        GradleException error = assertThrows(GradleException) {
+            snapshot.requireAndroidPolicy(':app', false)
+        }
+        assertTrue(error.message.contains('Project: :app'))
+        assertTrue(error.message.contains('simpledsl.android'))
+    }
+
+    @Test
+    void rejectsMalformedAndroidPolicyInSnapshot() {
+        GradleException error = assertThrows(GradleException) {
+            SimpleDslRegistryBridge.fromSnapshot([
+                schemaVersion: 2,
+                policies: [android: [java: 21, compileSdk: 36, minSdk: '24']],
+                platforms: [:],
+                libraries: [:],
+                plugins: [:]
+            ])
+        }
+
+        assertTrue(error.message.contains("policy 'android'.minSdk must be an integer"))
+    }
+
+    @Test
     void rejectsUnsupportedSnapshotSchema() {
         def error = assertThrows(GradleException) {
             SimpleDslRegistryBridge.fromSnapshot([

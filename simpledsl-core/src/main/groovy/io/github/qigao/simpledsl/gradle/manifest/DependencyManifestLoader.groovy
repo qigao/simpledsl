@@ -100,7 +100,14 @@ final class DependencyManifestLoader {
             plugins.put(alias, spec)
         }
 
-        new DependencyRegistry(state.javaVersion, versions, platforms, libraries, plugins, pluginsByGradleId)
+        new DependencyRegistry(
+                state.javaVersion,
+                state.androidPolicy,
+                versions,
+                platforms,
+                libraries,
+                plugins,
+                pluginsByGradleId)
     }
 
     private static void loadFile(File file, State state, LinkedHashSet<File> stack) {
@@ -136,7 +143,12 @@ final class DependencyManifestLoader {
 
         Map simpleDsl = optionalTable(parsed, 'simpledsl', canonical, 'SimpleDSL', 'simpledsl')
         if (simpleDsl != null) {
-            rejectUnknownKeys(simpleDsl.keySet() as Set<String>, ['java'] as Set, canonical, 'SimpleDSL', 'simpledsl')
+            rejectUnknownKeys(
+                    simpleDsl.keySet() as Set<String>,
+                    ['java', 'android'] as Set,
+                    canonical,
+                    'SimpleDSL',
+                    'simpledsl')
             Object javaNode = simpleDsl.get('java')
             if (javaNode != null) {
                 if (!isInteger(javaNode)) {
@@ -146,6 +158,40 @@ final class DependencyManifestLoader {
                     fail(canonical, 'SimpleDSL', 'simpledsl', 'duplicate simpledsl.java')
                 }
                 state.javaVersion = (javaNode as Number).intValue()
+            }
+
+            Object androidNode = simpleDsl.get('android')
+            if (androidNode != null) {
+                if (state.androidPolicy != null) {
+                    fail(canonical, 'SimpleDSL', 'simpledsl.android', 'duplicate simpledsl.android')
+                }
+                Map android = requireTableNode(androidNode, canonical, 'SimpleDSL', 'simpledsl.android')
+                rejectUnknownKeys(
+                        android.keySet() as Set<String>,
+                        ['java', 'compile-sdk', 'min-sdk', 'target-sdk'] as Set,
+                        canonical,
+                        'SimpleDSL',
+                        'simpledsl.android')
+
+                int androidJava = requirePositiveInteger(android, 'java', canonical, 'SimpleDSL', 'simpledsl.android')
+                int compileSdk = requirePositiveInteger(android, 'compile-sdk', canonical, 'SimpleDSL', 'simpledsl.android')
+                int minSdk = requirePositiveInteger(android, 'min-sdk', canonical, 'SimpleDSL', 'simpledsl.android')
+                Integer targetSdk = null
+                if (android.containsKey('target-sdk')) {
+                    targetSdk = requirePositiveInteger(android, 'target-sdk', canonical, 'SimpleDSL', 'simpledsl.android')
+                }
+
+                if (minSdk > compileSdk) {
+                    fail(canonical, 'SimpleDSL', 'simpledsl.android', 'min-sdk must be <= compile-sdk')
+                }
+                if (targetSdk != null && targetSdk < minSdk) {
+                    fail(canonical, 'SimpleDSL', 'simpledsl.android', 'target-sdk must be >= min-sdk')
+                }
+                if (targetSdk != null && targetSdk > compileSdk) {
+                    fail(canonical, 'SimpleDSL', 'simpledsl.android', 'target-sdk must be <= compile-sdk')
+                }
+
+                state.androidPolicy = new AndroidPolicySpec(androidJava, compileSdk, minSdk, targetSdk)
             }
         }
 
@@ -321,6 +367,18 @@ final class DependencyManifestLoader {
         value as String
     }
 
+    private static int requirePositiveInteger(Map table, String key, File file, String kind, String id) {
+        Object value = table.get(key)
+        if (!isInteger(value)) {
+            fail(file, kind, id, "${key} must be a positive integer")
+        }
+        long longValue = (value as Number).longValue()
+        if (longValue <= 0 || longValue > Integer.MAX_VALUE) {
+            fail(file, kind, id, "${key} must be a positive integer")
+        }
+        (int) longValue
+    }
+
     private static boolean isInteger(Object value) {
         value instanceof Byte ||
                 value instanceof Short ||
@@ -370,6 +428,7 @@ final class DependencyManifestLoader {
 
     private static final class State {
         Integer javaVersion
+        AndroidPolicySpec androidPolicy
         final Set<File> loaded = new LinkedHashSet<>()
         final Map<String, Map> versionValues = new LinkedHashMap<>()
         final Map<String, Map> libraryValues = new LinkedHashMap<>()
