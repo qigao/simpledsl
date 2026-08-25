@@ -44,9 +44,17 @@ gradlePlugin {
             description = "SimpleDSL build model and TOML driven capability execution plugin"
             tags = listOf("build-platform", "automation")
             compatibility {
-                features {
-                    configurationCache = true
-                }
+                features { configurationCache = true }
+            }
+        }
+        create("simpleDslJava") {
+            id = "io.github.qigao.simpledsl.java"
+            implementationClass = "io.github.qigao.simpledsl.gradle.java.SimpleDslJavaPlugin"
+            displayName = "SimpleDSL Java"
+            description = "SimpleDSL Java and Spring build backend"
+            tags = listOf("build-platform", "java", "spring")
+            compatibility {
+                features { configurationCache = true }
             }
         }
     }
