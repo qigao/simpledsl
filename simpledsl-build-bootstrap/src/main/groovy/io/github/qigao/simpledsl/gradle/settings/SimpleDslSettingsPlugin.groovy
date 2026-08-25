@@ -74,10 +74,13 @@ class SimpleDslSettingsPlugin implements Plugin<Settings> {
                 spec.parameters.manifestFile.fileValue(manifestFile)
             }
             serviceHolder.provider = serviceProvider
-            serviceProvider.get().javaVersion()
 
             Map<String, Object> snapshot = serviceProvider.get().snapshot()
             validateOwnedPluginDeclarations(snapshot)
+
+            Map policies = snapshot.policies as Map
+            Map javaPolicy = policies.get('java') as Map
+            String javaLine = javaPolicy == null ? 'not configured' : javaPolicy.toolchain.toString()
 
             List<Map<String, String>> discoveredProjects = []
             if (extension.moduleDiscovery.get()) {
@@ -112,7 +115,7 @@ class SimpleDslSettingsPlugin implements Plugin<Settings> {
                 root.tasks.register('simpledslDependencies', SimpleDslDependenciesTask) { task ->
                     task.group = 'SimpleDSL'
                     task.description = 'Print SimpleDSL dependency manifest diagnostics.'
-                    task.javaVersion.set(snapshot.javaVersion as Integer)
+                    task.javaPolicy.set(javaLine)
                     task.platformLines.set(platformLines)
                     task.pluginLines.set(pluginLines)
                     task.libraryLines.set(libraryLines)
