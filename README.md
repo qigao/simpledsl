@@ -98,13 +98,13 @@ java = 25
 [versions]
 spring-boot = "4.1.0"
 
-[libraries.spring-bom]
+[libraries.spring]
 module = "org.springframework.boot:spring-boot-dependencies"
 version.ref = "spring-boot"
 
 [libraries.spring-web]
 module = "org.springframework.boot:spring-boot-starter-web"
-platform = "spring-bom"
+platform = "spring"
 
 [plugins.spring-boot]
 id = "org.springframework.boot"
@@ -112,7 +112,7 @@ module = "org.springframework.boot:spring-boot-gradle-plugin"
 version.ref = "spring-boot"
 ```
 
-A BOM/platform coordinate is an ordinary library declaration. Libraries that are versioned by that BOM reference its alias with `platform`; there is no separate public `[platforms]` section.
+A BOM/platform coordinate is an ordinary library declaration. Libraries that are versioned by that BOM reference its alias with `platform`; there is no separate public `[platforms]` section. The built-in Spring module integration activates the platform alias `spring`, so a Spring Boot BOM used by `springService()` or `springLibrary()` should be declared as the `spring` library alias.
 
 YAML is an equivalent serialization of the same semantic model:
 
@@ -122,13 +122,13 @@ simpledsl:
 versions:
   spring-boot: "4.1.0"
 libraries:
-  spring-bom:
+  spring:
     module: org.springframework.boot:spring-boot-dependencies
     version:
       ref: spring-boot
   spring-web:
     module: org.springframework.boot:spring-boot-starter-web
-    platform: spring-bom
+    platform: spring
 plugins:
   spring-boot:
     id: org.springframework.boot
