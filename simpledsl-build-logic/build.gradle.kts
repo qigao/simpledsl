@@ -37,16 +37,6 @@ gradlePlugin {
     website = "https://github.com/qigao/simpledsl"
     vcsUrl = "https://github.com/qigao/simpledsl.git"
     plugins {
-        create("simpleDslBuild") {
-            id = "io.github.qigao.simpledsl.build"
-            implementationClass = "io.github.qigao.simpledsl.gradle.SimpleDslBuildPlugin"
-            displayName = "SimpleDSL Build"
-            description = "SimpleDSL build model and TOML driven capability execution plugin"
-            tags = listOf("build-platform", "automation")
-            compatibility {
-                features { configurationCache = true }
-            }
-        }
         create("simpleDslJava") {
             id = "io.github.qigao.simpledsl.java"
             implementationClass = "io.github.qigao.simpledsl.gradle.java.SimpleDslJavaPlugin"

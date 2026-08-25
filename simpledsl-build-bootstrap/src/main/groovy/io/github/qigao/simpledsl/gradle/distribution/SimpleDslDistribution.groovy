@@ -2,9 +2,10 @@ package io.github.qigao.simpledsl.gradle.distribution
 
 final class SimpleDslDistribution {
     static final String GROUP = 'io.github.qigao.simpledsl'
-    static final String BUILD_LOGIC_ARTIFACT = 'simpledsl-build-logic'
+    static final String JAVA_ARTIFACT = 'simpledsl-build-logic'
     static final String SETTINGS_PLUGIN_ID = 'io.github.qigao.simpledsl.settings'
-    static final String BUILD_PLUGIN_ID = 'io.github.qigao.simpledsl.build'
+    static final String JAVA_PLUGIN_ID = 'io.github.qigao.simpledsl.java'
+    static final String REMOVED_BUILD_PLUGIN_ID = 'io.github.qigao.simpledsl.build'
 
     static final Map<String, String> OWNED_PLUGIN_MODULES = Collections.unmodifiableMap([
             'org.springframework.boot'         : 'org.springframework.boot:spring-boot-gradle-plugin',
@@ -26,8 +27,8 @@ final class SimpleDslDistribution {
         required('version')
     }
 
-    static String buildLogicCoordinate() {
-        "${GROUP}:${BUILD_LOGIC_ARTIFACT}:${version()}"
+    static String javaCoordinate() {
+        "${GROUP}:${JAVA_ARTIFACT}:${version()}"
     }
 
     static String ownedPluginVersion(String pluginId) {

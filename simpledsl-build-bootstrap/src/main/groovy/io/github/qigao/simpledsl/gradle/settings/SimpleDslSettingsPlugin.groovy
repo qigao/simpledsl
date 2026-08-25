@@ -26,13 +26,20 @@ class SimpleDslSettingsPlugin implements Plugin<Settings> {
             String pluginId = details.requested.id.id
             if (pluginId == SimpleDslDistribution.SETTINGS_PLUGIN_ID) return
 
-            if (pluginId == SimpleDslDistribution.BUILD_PLUGIN_ID) {
+            if (pluginId == SimpleDslDistribution.REMOVED_BUILD_PLUGIN_ID) {
+                throw new GradleException(
+                        'SimpleDSL plugin migration required\n' +
+                        "Plugin: ${pluginId}\n" +
+                        "Replacement: ${SimpleDslDistribution.JAVA_PLUGIN_ID}")
+            }
+
+            if (pluginId == SimpleDslDistribution.JAVA_PLUGIN_ID) {
                 String managed = SimpleDslDistribution.version()
                 String requested = details.requested.version
                 if (requested && requested != managed) {
                     throw simpleDslVersionConflict(pluginId, requested, managed)
                 }
-                details.useModule(SimpleDslDistribution.buildLogicCoordinate())
+                details.useModule(SimpleDslDistribution.javaCoordinate())
                 return
             }
 
