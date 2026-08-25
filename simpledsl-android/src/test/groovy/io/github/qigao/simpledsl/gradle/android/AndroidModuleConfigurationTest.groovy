@@ -158,5 +158,6 @@ rootProject.name = 'android-consumer'
                 .withProjectDir(projectDir.toFile())
                 .withArguments((arguments as List<String>) + ['--stacktrace'])
                 .withPluginClasspath()
+                .forwardOutput()
     }
 }
