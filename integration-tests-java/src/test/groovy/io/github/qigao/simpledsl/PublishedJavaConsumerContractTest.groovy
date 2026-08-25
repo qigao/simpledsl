@@ -16,12 +16,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue
 class PublishedJavaConsumerContractTest {
     private static final List<String> PUBLIC_PLUGIN_IDS = [
             'io.github.qigao.simpledsl.settings',
-            'io.github.qigao.simpledsl.java'
+            'io.github.qigao.simpledsl.java',
+            'io.github.qigao.simpledsl.android'
     ].asImmutable()
 
     private static final Set<String> IMPLEMENTATION_ARTIFACT_IDS = [
             'simpledsl-core',
-            'simpledsl-java'
+            'simpledsl-java',
+            'simpledsl-android'
     ] as Set
 
     @TempDir
@@ -33,7 +35,7 @@ class PublishedJavaConsumerContractTest {
         String version = requiredProperty('simpledsl.test.version')
 
         assertTrue(repository.isDirectory())
-        assertEquals(2, PUBLIC_PLUGIN_IDS.size())
+        assertEquals(3, PUBLIC_PLUGIN_IDS.size())
 
         Set<String> actualPluginIds = new TreeSet<>()
         repository.eachFileRecurse { File file ->
@@ -56,7 +58,7 @@ class PublishedJavaConsumerContractTest {
     }
 
     @Test
-    void publishesExactlyTheCoreAndJavaImplementationArtifacts() {
+    void publishesExactlyTheCoreJavaAndAndroidImplementationArtifacts() {
         File repository = new File(requiredProperty('simpledsl.test.repo'))
         String version = requiredProperty('simpledsl.test.version')
 
@@ -77,7 +79,7 @@ class PublishedJavaConsumerContractTest {
     }
 
     @Test
-    void javaPublishedRuntimeGraphDoesNotContainAgp() {
+    void javaAndCorePublishedRuntimeGraphsDoNotContainAgp() {
         File repository = new File(requiredProperty('simpledsl.test.repo'))
         String version = requiredProperty('simpledsl.test.version')
 
