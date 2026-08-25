@@ -2,6 +2,7 @@ package io.github.qigao.simpledsl
 
 import org.gradle.testkit.runner.BuildResult
 import org.gradle.testkit.runner.GradleRunner
+import org.gradle.testkit.runner.UnexpectedBuildFailure
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 
@@ -25,19 +26,13 @@ class PublishedAndroidConsumerContractTest {
                 ':app:simpledslAndroidVariants',
                 ':feature:simpledslAndroidVariants')
 
-        BuildResult first = GradleRunner.create()
-                .withProjectDir(fixture)
-                .withArguments(arguments)
-                .build()
+        BuildResult first = build(fixture, arguments)
 
         assertTrue(first.output.contains('SimpleDSL Android variant: debug'))
         assertTrue(first.output.contains('SimpleDSL Android variant: release'))
         assertTrue(first.output.contains('Configuration cache entry stored.'))
 
-        BuildResult second = GradleRunner.create()
-                .withProjectDir(fixture)
-                .withArguments(arguments)
-                .build()
+        BuildResult second = build(fixture, arguments)
 
         assertTrue(
                 second.output.contains('Reusing configuration cache.') ||
@@ -51,14 +46,24 @@ class PublishedAndroidConsumerContractTest {
     void assemblesPublishedAndroidApplicationAndLibrary() {
         File fixture = copyFixture('published-android-assemble')
 
-        BuildResult result = GradleRunner.create()
-                .withProjectDir(fixture)
-                .withArguments(consumerArguments(
-                        ':app:assembleDebug',
-                        ':feature:assembleDebug'))
-                .build()
+        BuildResult result = build(
+                fixture,
+                consumerArguments(':app:assembleDebug', ':feature:assembleDebug'))
 
         assertTrue(result.output.contains('BUILD SUCCESSFUL'))
+    }
+
+    private static BuildResult build(File fixture, List<String> arguments) {
+        try {
+            return GradleRunner.create()
+                    .withProjectDir(fixture)
+                    .withArguments(arguments)
+                    .build()
+        } catch (UnexpectedBuildFailure error) {
+            throw new AssertionError(
+                    "Published Android consumer build failed:\n${error.buildResult.output}".toString(),
+                    error)
+        }
     }
 
     private List<String> consumerArguments(String... tasks) {
