@@ -148,10 +148,8 @@ class PublishedJavaConsumerContractTest {
 
     private static Set<String> publishedPomDependencies(File repository, String artifactId, String version) {
         File pom = null
-        String expectedName = "${artifactId}-${version}.pom".toString()
         repository.eachFileRecurse { File file ->
-            if (pom != null || !file.isFile()) return
-            if (file.name != expectedName) return
+            if (pom != null || !file.isFile() || !file.name.endsWith('.pom')) return
             if (file.parentFile?.name != version) return
             if (file.parentFile?.parentFile?.name != artifactId) return
             pom = file
