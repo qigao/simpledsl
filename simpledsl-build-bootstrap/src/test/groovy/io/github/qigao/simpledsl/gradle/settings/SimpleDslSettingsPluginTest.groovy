@@ -45,6 +45,24 @@ simpledsl:
     }
 
     @Test
+    void acceptsDependencyOnlyManifestWithoutJavaPolicy() {
+        writeRootManifest('dependencies.toml', '''
+[versions]
+junit = "6.0.1"
+
+[libraries.junit]
+module = "org.junit.jupiter:junit-jupiter"
+version.ref = "junit"
+''')
+        writeSettings()
+
+        def result = runner('simpledslDependencies').build()
+
+        assertTrue(result.output.contains('Java: not configured'))
+        assertTrue(result.output.contains('junit -> org.junit.jupiter:junit-jupiter:6.0.1'))
+    }
+
+    @Test
     void rejectsAmbiguousRootManifests() {
         writeRootManifest('dependencies.toml', '''
 [simpledsl]
