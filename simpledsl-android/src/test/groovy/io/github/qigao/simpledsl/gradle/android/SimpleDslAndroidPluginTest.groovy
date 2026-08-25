@@ -27,7 +27,7 @@ class SimpleDslAndroidPluginTest {
 
         def extension = project.extensions.findByName('simpledsl')
         assertNotNull(extension)
-        assertEquals('io.github.qigao.simpledsl.gradle.android.SimpleDslAndroidExtension', extension.class.name)
+        assertTrue(extension instanceof SimpleDslAndroidExtension)
         Set<String> methods = extension.class.methods*.name as Set<String>
         assertTrue(methods.contains('androidApplication'))
         assertTrue(methods.contains('androidLibrary'))
