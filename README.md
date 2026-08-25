@@ -17,7 +17,7 @@ io.github.qigao.simpledsl.settings
 io.github.qigao.simpledsl.build
 ```
 
-`io.github.qigao.simpledsl.settings` runs in the Settings lifecycle. It loads SimpleDSL TOML dependency policy, manages dependency/plugin coordinates and versions, and performs module discovery.
+`io.github.qigao.simpledsl.settings` runs in the Settings lifecycle. It loads SimpleDSL TOML or YAML dependency policy, manages dependency/plugin coordinates and versions, and performs module discovery.
 
 `io.github.qigao.simpledsl.build` is the project-side entry point for SimpleDSL build behavior. Module types and capabilities are composed internally; they do not have Plugin Portal marker IDs.
 
@@ -65,22 +65,90 @@ Names such as `spring-service`, `java-library`, `web`, `jdbc`, `jpa`, `jooq`, an
 
 ## Dependency manifest
 
-The default dependency manifest is:
+SimpleDSL discovers the dependency manifest at the repository root. Exactly one of these default names may exist:
 
 ```text
-gradle/simpledsl/dependencies.toml
+dependencies.toml
+dependencies.yml
+dependencies.yaml
 ```
 
-A manifest can include smaller policy files:
+If none exists, configuration fails and lists the accepted names. If more than one exists, configuration fails as ambiguous; SimpleDSL does not assign precedence between TOML and YAML.
+
+A typical repository keeps the root manifest small and includes policy fragments:
+
+```text
+repo/
+├── dependencies.toml
+├── dependencies/
+│   ├── spring.toml
+│   └── test.yml
+├── settings.gradle
+└── ...
+```
+
+TOML uses Gradle Version Catalog vocabulary for versions, libraries, plugins, and `version.ref`, with small SimpleDSL extensions for build policy and includes:
 
 ```toml
-include = ["spring.toml", "test.toml"]
+include = ["dependencies/spring.toml", "dependencies/test.yml"]
 
-[java]
-version = 25
+[simpledsl]
+java = 25
+
+[versions]
+spring-boot = "4.1.0"
+
+[libraries.spring-bom]
+module = "org.springframework.boot:spring-boot-dependencies"
+version.ref = "spring-boot"
+
+[libraries.spring-web]
+module = "org.springframework.boot:spring-boot-starter-web"
+platform = "spring-bom"
+
+[plugins.spring-boot]
+id = "org.springframework.boot"
+module = "org.springframework.boot:spring-boot-gradle-plugin"
+version.ref = "spring-boot"
 ```
 
-The manifest owns consumer dependency policy: Java toolchain version, platforms/BOMs, libraries, and external Gradle-plugin coordinates where needed.
+A BOM/platform coordinate is an ordinary library declaration. Libraries that are versioned by that BOM reference its alias with `platform`; there is no separate public `[platforms]` section.
+
+YAML is an equivalent serialization of the same semantic model:
+
+```yaml
+simpledsl:
+  java: 25
+versions:
+  spring-boot: "4.1.0"
+libraries:
+  spring-bom:
+    module: org.springframework.boot:spring-boot-dependencies
+    version:
+      ref: spring-boot
+  spring-web:
+    module: org.springframework.boot:spring-boot-starter-web
+    platform: spring-bom
+plugins:
+  spring-boot:
+    id: org.springframework.boot
+    version:
+      ref: spring-boot
+```
+
+Includes are resolved relative to the file that declares them and may mix `.toml`, `.yml`, and `.yaml`. Duplicate aliases and include cycles fail regardless of serialization format.
+
+The Gradle-shaped vocabulary is intentionally a compatibility convention rather than a claim that a SimpleDSL manifest is itself a Gradle Version Catalog. `simpledsl`, `include`, and `platform` ownership are SimpleDSL policy semantics layered on top of the familiar dependency notation.
+
+A non-default location can be selected explicitly in `settings.gradle`:
+
+```groovy
+simpledslSettings {
+    dependencyManifest.set(layout.settingsDirectory.file('config/dependencies.yml'))
+}
+```
+
+The manifest owns consumer dependency policy: Java toolchain version, BOMs, libraries, and external Gradle-plugin coordinates where needed.
 
 SimpleDSL does not republish third-party software under `io.github.qigao.simpledsl.*`. Spring Boot, GraalVM Native Build Tools, jOOQ, jsonschema2pojo, and application libraries remain their original third-party dependencies/plugins and are referenced by their original coordinates.
 

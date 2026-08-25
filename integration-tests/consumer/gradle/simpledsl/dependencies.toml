@@ -1,4 +1,0 @@
-include = ["spring.toml", "test.toml"]
-
-[java]
-version = 25

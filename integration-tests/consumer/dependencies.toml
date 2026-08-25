@@ -1,0 +1,4 @@
+include = ["dependencies/spring.yml", "dependencies/test.toml"]
+
+[simpledsl]
+java = 25
