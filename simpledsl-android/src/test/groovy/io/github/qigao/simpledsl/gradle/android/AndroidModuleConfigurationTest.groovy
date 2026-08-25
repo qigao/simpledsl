@@ -27,16 +27,20 @@ simpledsl {
     }
 }
 
-def androidDsl = extensions.getByName('android')
 assert pluginManager.hasPlugin('com.android.application')
 assert !pluginManager.hasPlugin('org.jetbrains.kotlin.android')
-assert androidDsl.namespace == 'example.app'
-assert androidDsl.compileSdk == 36
-assert androidDsl.defaultConfig.minSdk == 24
-assert androidDsl.defaultConfig.targetSdk == 36
-assert androidDsl.defaultConfig.applicationId == 'example.app'
-assert androidDsl.compileOptions.sourceCompatibility == JavaVersion.VERSION_21
-assert androidDsl.compileOptions.targetCompatibility == JavaVersion.VERSION_21
+
+def androidDsl = extensions.getByName('android')
+def androidComponents = extensions.getByName('androidComponents')
+androidComponents.onVariants { variant ->
+    assert androidDsl.namespace == 'example.app'
+    assert androidDsl.compileSdk == 36
+    assert androidDsl.defaultConfig.minSdk == 24
+    assert androidDsl.defaultConfig.targetSdk == 36
+    assert androidDsl.defaultConfig.applicationId == 'example.app'
+    assert androidDsl.compileOptions.sourceCompatibility == JavaVersion.VERSION_21
+    assert androidDsl.compileOptions.targetCompatibility == JavaVersion.VERSION_21
+}
 ''')
 
         BuildResult result = build(':app:help')
@@ -55,14 +59,18 @@ simpledsl {
     }
 }
 
-def androidDsl = extensions.getByName('android')
 assert pluginManager.hasPlugin('com.android.library')
 assert !pluginManager.hasPlugin('org.jetbrains.kotlin.android')
-assert androidDsl.namespace == 'example.feature'
-assert androidDsl.compileSdk == 36
-assert androidDsl.defaultConfig.minSdk == 24
-assert androidDsl.compileOptions.sourceCompatibility == JavaVersion.VERSION_21
-assert androidDsl.compileOptions.targetCompatibility == JavaVersion.VERSION_21
+
+def androidDsl = extensions.getByName('android')
+def androidComponents = extensions.getByName('androidComponents')
+androidComponents.onVariants { variant ->
+    assert androidDsl.namespace == 'example.feature'
+    assert androidDsl.compileSdk == 36
+    assert androidDsl.defaultConfig.minSdk == 24
+    assert androidDsl.compileOptions.sourceCompatibility == JavaVersion.VERSION_21
+    assert androidDsl.compileOptions.targetCompatibility == JavaVersion.VERSION_21
+}
 ''')
 
         BuildResult result = build(':feature:help')
