@@ -1,5 +1,7 @@
 package io.github.qigao.simpledsl.gradle.android
 
+import io.github.qigao.simpledsl.gradle.android.module.SimpleDslAndroidApplicationPlugin
+import io.github.qigao.simpledsl.gradle.android.module.SimpleDslAndroidLibraryPlugin
 import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
 import org.gradle.api.Action
 import org.gradle.api.GradleException
@@ -15,38 +17,56 @@ class SimpleDslAndroidExtension {
     }
 
     void androidApplication(Action<? super SimpleDslAndroidApplicationSpec> action) {
-        SimpleDslAndroidApplicationSpec spec = project.objects.newInstance(SimpleDslAndroidApplicationSpec)
+        SimpleDslAndroidApplicationSpec spec = createApplicationSpec()
         action.execute(spec)
-        moduleAdapterPending('androidApplication')
+        project.pluginManager.apply(SimpleDslAndroidApplicationPlugin)
     }
 
     void androidApplication(Closure closure) {
-        SimpleDslAndroidApplicationSpec spec = project.objects.newInstance(SimpleDslAndroidApplicationSpec)
+        SimpleDslAndroidApplicationSpec spec = createApplicationSpec()
         configure(spec, closure)
-        moduleAdapterPending('androidApplication')
+        project.pluginManager.apply(SimpleDslAndroidApplicationPlugin)
     }
 
     void androidLibrary(Action<? super SimpleDslAndroidLibrarySpec> action) {
-        SimpleDslAndroidLibrarySpec spec = project.objects.newInstance(SimpleDslAndroidLibrarySpec)
+        SimpleDslAndroidLibrarySpec spec = createLibrarySpec()
         action.execute(spec)
-        moduleAdapterPending('androidLibrary')
+        project.pluginManager.apply(SimpleDslAndroidLibraryPlugin)
     }
 
     void androidLibrary(Closure closure) {
-        SimpleDslAndroidLibrarySpec spec = project.objects.newInstance(SimpleDslAndroidLibrarySpec)
+        SimpleDslAndroidLibrarySpec spec = createLibrarySpec()
         configure(spec, closure)
-        moduleAdapterPending('androidLibrary')
+        project.pluginManager.apply(SimpleDslAndroidLibraryPlugin)
+    }
+
+    private SimpleDslAndroidApplicationSpec createApplicationSpec() {
+        rejectDuplicateModuleDeclaration()
+        project.extensions.create(
+                SimpleDslAndroidApplicationPlugin.SPEC_EXTENSION,
+                SimpleDslAndroidApplicationSpec)
+    }
+
+    private SimpleDslAndroidLibrarySpec createLibrarySpec() {
+        rejectDuplicateModuleDeclaration()
+        project.extensions.create(
+                SimpleDslAndroidLibraryPlugin.SPEC_EXTENSION,
+                SimpleDslAndroidLibrarySpec)
+    }
+
+    private void rejectDuplicateModuleDeclaration() {
+        if (project.extensions.findByName(SimpleDslAndroidApplicationPlugin.SPEC_EXTENSION) != null ||
+                project.extensions.findByName(SimpleDslAndroidLibraryPlugin.SPEC_EXTENSION) != null) {
+            throw new GradleException(
+                    'SimpleDSL Android configuration error\n' +
+                    "Project: ${project.path}\n" +
+                    'Problem: exactly one Android module type may be declared')
+        }
     }
 
     private static void configure(Object target, Closure closure) {
         Closure configured = closure.rehydrate(target, closure.owner, closure.thisObject)
         configured.resolveStrategy = Closure.DELEGATE_FIRST
         configured.call()
-    }
-
-    private static void moduleAdapterPending(String method) {
-        throw new GradleException(
-                'SimpleDSL Android foundation error\n' +
-                "Problem: ${method} module adapter is not configured")
     }
 }
