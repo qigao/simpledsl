@@ -1,10 +1,9 @@
 package io.github.qigao.simpledsl.gradle.module
 
-import io.github.qigao.simpledsl.gradle.ModuleKind
 import io.github.qigao.simpledsl.gradle.catalog.CatalogLibrary
 import io.github.qigao.simpledsl.gradle.catalog.CatalogPlatform
 import io.github.qigao.simpledsl.gradle.catalog.DependencyCatalogSnapshot
-import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
+import io.github.qigao.simpledsl.gradle.model.SimpleDslProjectModel
 import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.compile.JavaCompile
 import org.gradle.testfixtures.ProjectBuilder
@@ -19,7 +18,7 @@ class ModuleTypePluginsTest {
 
         project.pluginManager.apply(SimpleDslJavaLibraryPlugin)
 
-        assertEquals(ModuleKind.JAVA_LIBRARY, project.extensions.getByType(SimpleDslModuleModel).moduleKind.get())
+        assertEquals('java-library', project.extensions.getByType(SimpleDslProjectModel).moduleType.get())
         assertEquals(25, project.extensions.getByType(JavaPluginExtension).toolchain.languageVersion.get().asInt())
         project.tasks.withType(JavaCompile).each { task -> assertEquals(25, task.options.release.get()) }
     }
@@ -30,7 +29,7 @@ class ModuleTypePluginsTest {
 
         project.pluginManager.apply(SimpleDslSpringLibraryPlugin)
 
-        assertEquals(ModuleKind.SPRING_LIBRARY, project.extensions.getByType(SimpleDslModuleModel).moduleKind.get())
+        assertEquals('spring-library', project.extensions.getByType(SimpleDslProjectModel).moduleType.get())
     }
 
     @Test
@@ -39,7 +38,7 @@ class ModuleTypePluginsTest {
 
         project.pluginManager.apply(SimpleDslSpringServicePlugin)
 
-        assertEquals(ModuleKind.SPRING_SERVICE, project.extensions.getByType(SimpleDslModuleModel).moduleKind.get())
+        assertEquals('spring-service', project.extensions.getByType(SimpleDslProjectModel).moduleType.get())
     }
 
     private static def projectWithCatalog() {

@@ -3,12 +3,12 @@ package io.github.qigao.simpledsl.gradle.capability
 import io.github.qigao.simpledsl.gradle.SimpleDslConfigurationException
 import io.github.qigao.simpledsl.gradle.catalog.DependencyCatalogSnapshot
 import io.github.qigao.simpledsl.gradle.dependency.DependencyBridge
-import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
+import io.github.qigao.simpledsl.gradle.model.SimpleDslProjectModel
 import org.gradle.api.Project
 
 final class CapabilityEngine {
     private final Project project
-    private final SimpleDslModuleModel model
+    private final SimpleDslProjectModel model
     private final DependencyCatalogSnapshot catalog
     private final CapabilityRegistry registry
     private final CapabilityPluginRegistry pluginRegistry
@@ -16,7 +16,7 @@ final class CapabilityEngine {
 
     CapabilityEngine(
             Project project,
-            SimpleDslModuleModel model,
+            SimpleDslProjectModel model,
             DependencyCatalogSnapshot catalog,
             CapabilityRegistry registry,
             CapabilityPluginRegistry pluginRegistry) {
@@ -75,11 +75,11 @@ final class CapabilityEngine {
 
     private void validateModule(CapabilitySpec spec) {
         if (spec.allowedModules.isEmpty()) return
-        if (!model.moduleKind.isPresent()) {
+        if (!model.moduleType.isPresent()) {
             fail(spec.id,
                     "capability '${spec.id}' requires a module type; allowed: ${spec.allowedModules.join(',')}")
         }
-        def current = model.moduleKind.get()
+        String current = model.moduleType.get()
         if (!spec.allowedModules.contains(current)) {
             throw new SimpleDslConfigurationException(
                     'SimpleDSL configuration error\n' +

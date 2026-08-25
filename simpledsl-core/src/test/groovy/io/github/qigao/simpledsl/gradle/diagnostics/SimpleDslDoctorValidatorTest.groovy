@@ -1,11 +1,10 @@
 package io.github.qigao.simpledsl.gradle.diagnostics
 
-import io.github.qigao.simpledsl.gradle.ModuleKind
 import io.github.qigao.simpledsl.gradle.capability.CapabilityPluginRegistry
 import io.github.qigao.simpledsl.gradle.capability.CapabilityRegistry
 import io.github.qigao.simpledsl.gradle.capability.CapabilitySpec
 import io.github.qigao.simpledsl.gradle.catalog.DependencyCatalogSnapshot
-import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
+import io.github.qigao.simpledsl.gradle.model.SimpleDslProjectModel
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Test
 
@@ -15,16 +14,16 @@ class SimpleDslDoctorValidatorTest {
     @Test
     void releaseOwnedExternalPluginIdsDoNotRequireConsumerCatalogAliases() {
         def project = ProjectBuilder.builder().build()
-        def model = project.extensions.create('simpledslModuleModelForTest', SimpleDslModuleModel)
+        def model = project.extensions.create('simpledslProjectModelForTest', SimpleDslProjectModel)
         model.capabilities.convention(Collections.emptySet())
         model.platformBindings.convention(Collections.emptySet())
-        model.claim(ModuleKind.SPRING_SERVICE, project.path)
+        model.claim('spring-service', project.path)
         model.enableCapability('native')
 
         def registry = new CapabilityRegistry()
         registry.register(
                 CapabilitySpec.builder('native')
-                        .allow(ModuleKind.SPRING_SERVICE)
+                        .allow('spring-service')
                         .externalPluginId('org.graalvm.buildtools.native')
                         .build())
 

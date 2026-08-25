@@ -2,14 +2,14 @@ package io.github.qigao.simpledsl.gradle
 
 import io.github.qigao.simpledsl.gradle.capability.BuiltinCapabilities
 import io.github.qigao.simpledsl.gradle.capability.CapabilityEngine
-import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
+import io.github.qigao.simpledsl.gradle.model.SimpleDslProjectModel
 import org.gradle.api.Project
 
 class SimpleDslPersistenceExtension {
     protected final Project project
-    protected final SimpleDslModuleModel model
+    protected final SimpleDslProjectModel model
 
-    SimpleDslPersistenceExtension(Project project, SimpleDslModuleModel model) {
+    SimpleDslPersistenceExtension(Project project, SimpleDslProjectModel model) {
         this.project = project
         this.model = model
     }

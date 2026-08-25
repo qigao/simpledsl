@@ -16,6 +16,7 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 dependencies {
+    implementation(project(":simpledsl-core"))
     implementation(localGroovy())
     implementation(libs.spring.boot.gradle)
     implementation(libs.graalvm.native.gradle)
@@ -40,7 +41,7 @@ gradlePlugin {
             id = "io.github.qigao.simpledsl.build"
             implementationClass = "io.github.qigao.simpledsl.gradle.SimpleDslBuildPlugin"
             displayName = "SimpleDSL Build"
-            description = "SimpleDSL build model and TOML driven capability execution plugin"
+            description = "SimpleDSL Java/Spring build backend during the 0.3.0 migration"
             tags = listOf("build-platform", "automation")
             compatibility {
                 features {

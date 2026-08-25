@@ -1,24 +1,18 @@
 package io.github.qigao.simpledsl.gradle
 
-import org.gradle.api.GradleException
-
-class SimpleDslConfigurationException extends GradleException {
+final class SimpleDslConfigurationException extends RuntimeException {
     SimpleDslConfigurationException(String message) {
         super(message)
     }
 
-    SimpleDslConfigurationException(String message, Throwable cause) {
-        super(message, cause)
-    }
-
     static SimpleDslConfigurationException moduleTypeConflict(
             String projectPath,
-            ModuleKind existing,
-            ModuleKind requested) {
+            String existing,
+            String requested) {
         new SimpleDslConfigurationException(
                 'SimpleDSL configuration error\n' +
                 "Project: ${projectPath}\n" +
-                'Problem: module type conflict\n' +
+                'Problem: exactly one module type is allowed\n' +
                 "Existing: ${existing}\n" +
                 "Requested: ${requested}")
     }

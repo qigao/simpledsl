@@ -1,6 +1,5 @@
 package io.github.qigao.simpledsl.gradle.capability
 
-import io.github.qigao.simpledsl.gradle.ModuleKind
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 
@@ -8,7 +7,7 @@ import groovy.transform.ToString
 @ToString(includeNames = true)
 final class CapabilitySpec {
     final String id
-    final Set<Object> allowedModules
+    final Set<String> allowedModules
     final Set<String> requires
     final Set<String> conflicts
     final List<DependencyBinding> dependencies
@@ -16,7 +15,7 @@ final class CapabilitySpec {
 
     private CapabilitySpec(
             String id,
-            Set<Object> allowedModules,
+            Set<String> allowedModules,
             Set<String> requires,
             Set<String> conflicts,
             List<DependencyBinding> dependencies,
@@ -37,7 +36,7 @@ final class CapabilitySpec {
 
     static final class Builder {
         private final String id
-        private final Set<Object> allowedModules = new LinkedHashSet<>()
+        private final Set<String> allowedModules = new LinkedHashSet<>()
         private final Set<String> requires = new LinkedHashSet<>()
         private final Set<String> conflicts = new LinkedHashSet<>()
         private final List<DependencyBinding> dependencies = []
@@ -48,11 +47,6 @@ final class CapabilitySpec {
                 throw new IllegalArgumentException('capability id must be non-empty')
             }
             this.id = id
-        }
-
-        Builder allow(ModuleKind... kinds) {
-            allowedModules.addAll(Arrays.asList(kinds))
-            this
         }
 
         Builder allow(String... moduleTypes) {

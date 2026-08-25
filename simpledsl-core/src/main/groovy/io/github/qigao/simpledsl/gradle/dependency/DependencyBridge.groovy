@@ -2,11 +2,11 @@ package io.github.qigao.simpledsl.gradle.dependency
 
 import io.github.qigao.simpledsl.gradle.SimpleDslConfigurationException
 import io.github.qigao.simpledsl.gradle.catalog.DependencyCatalogSnapshot
-import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
+import io.github.qigao.simpledsl.gradle.model.SimpleDslProjectModel
 import org.gradle.api.Project
 
 final class DependencyBridge {
-    static void add(Project project, SimpleDslModuleModel model, String configuration, String alias) {
+    static void add(Project project, SimpleDslProjectModel model, String configuration, String alias) {
         requireConfiguration(project, configuration, alias)
         DependencyCatalogSnapshot catalog = catalog(project)
         def library = catalog.library(alias)
@@ -18,7 +18,7 @@ final class DependencyBridge {
 
     static void activatePlatform(
             Project project,
-            SimpleDslModuleModel model,
+            SimpleDslProjectModel model,
             String configuration,
             String platformAlias) {
         requireConfiguration(project, configuration, platformAlias)
@@ -50,7 +50,7 @@ final class DependencyBridge {
             throw new SimpleDslConfigurationException(
                     'SimpleDSL configuration error\n' +
                     "Project: ${project.path}\n" +
-                    'Problem: SimpleDSL dependency catalog is unavailable; apply io.github.qigao.simpledsl.module')
+                    'Problem: SimpleDSL dependency catalog is unavailable; apply a SimpleDSL project backend')
         }
         value
     }

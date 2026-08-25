@@ -6,7 +6,7 @@ import io.github.qigao.simpledsl.gradle.capability.BuiltinCapabilities
 import io.github.qigao.simpledsl.gradle.catalog.CatalogLibrary
 import io.github.qigao.simpledsl.gradle.catalog.CatalogPlatform
 import io.github.qigao.simpledsl.gradle.catalog.DependencyCatalogSnapshot
-import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
+import io.github.qigao.simpledsl.gradle.model.SimpleDslProjectModel
 import io.github.qigao.simpledsl.gradle.module.SimpleDslJavaLibraryPlugin
 import io.github.qigao.simpledsl.gradle.module.SimpleDslSpringServicePlugin
 import org.gradle.testfixtures.ProjectBuilder
@@ -29,7 +29,7 @@ class FeaturePluginsTest {
 
         project.extensions.getByType(SimpleDslExtension).web()
 
-        def model = project.extensions.getByType(SimpleDslModuleModel)
+        def model = project.extensions.getByType(SimpleDslProjectModel)
         assertTrue(model.capabilities.get().contains('web'))
         def modules = project.configurations.getByName('implementation').dependencies.collect { it.group + ':' + it.name }
         assertTrue(modules.contains('org.springframework.boot:spring-boot-starter-webmvc'))
@@ -53,7 +53,7 @@ class FeaturePluginsTest {
         simpledsl.persistence.jdbc()
         simpledsl.persistence.jooq()
 
-        def capabilities = project.extensions.getByType(SimpleDslModuleModel).capabilities.get()
+        def capabilities = project.extensions.getByType(SimpleDslProjectModel).capabilities.get()
         assertTrue(capabilities.containsAll([
                 'aop', 'transaction', 'web', 'http-client', 'messaging',
                 'redis', 'lombok', 'jpa', 'jdbc', 'jooq'

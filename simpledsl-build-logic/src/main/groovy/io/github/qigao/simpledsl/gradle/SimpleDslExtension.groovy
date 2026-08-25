@@ -3,7 +3,7 @@ package io.github.qigao.simpledsl.gradle
 import io.github.qigao.simpledsl.gradle.capability.BuiltinCapabilities
 import io.github.qigao.simpledsl.gradle.capability.CapabilityEngine
 import io.github.qigao.simpledsl.gradle.dependency.DependencyBridge
-import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
+import io.github.qigao.simpledsl.gradle.model.SimpleDslProjectModel
 import io.github.qigao.simpledsl.gradle.module.SimpleDslJavaLibraryPlugin
 import io.github.qigao.simpledsl.gradle.module.SimpleDslSpringLibraryPlugin
 import io.github.qigao.simpledsl.gradle.module.SimpleDslSpringServicePlugin
@@ -14,10 +14,10 @@ import org.gradle.api.Project
 
 class SimpleDslExtension {
     private final Project project
-    private final SimpleDslModuleModel model
+    private final SimpleDslProjectModel model
     private final SimpleDslPersistenceExtension persistence
 
-    SimpleDslExtension(Project project, SimpleDslModuleModel model) {
+    SimpleDslExtension(Project project, SimpleDslProjectModel model) {
         this.project = project
         this.model = model
         this.persistence = new SimpleDslPersistenceExtension(project, model)
