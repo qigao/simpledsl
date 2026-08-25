@@ -147,10 +147,16 @@ class PublishedJavaConsumerContractTest {
     }
 
     private static Set<String> publishedPomDependencies(File repository, String artifactId, String version) {
-        File pom = new File(
-                repository,
-                "io/github/qigao/simpledsl/${artifactId}/${version}/${artifactId}-${version}.pom")
-        assertTrue(pom.isFile(), "Missing published POM: ${pom}".toString())
+        File pom = null
+        String expectedName = "${artifactId}-${version}.pom".toString()
+        repository.eachFileRecurse { File file ->
+            if (pom != null || !file.isFile()) return
+            if (file.name != expectedName) return
+            if (file.parentFile?.name != version) return
+            if (file.parentFile?.parentFile?.name != artifactId) return
+            pom = file
+        }
+        assertTrue(pom != null, "Missing published POM for ${artifactId}:${version}".toString())
 
         def model = new XmlSlurper().parse(pom)
         model.dependencies.dependency.collect { dependency ->
