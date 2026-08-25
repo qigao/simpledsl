@@ -250,6 +250,25 @@ plugins {
     }
 
     @Test
+    void rejectsConsumerOverrideOfPinnedComposeCompilerVersion() {
+        writeAndroidManifest()
+        Files.createDirectories(projectDir.resolve('app'))
+        Files.writeString(projectDir.resolve('app/build.gradle'), '''
+plugins {
+    id 'org.jetbrains.kotlin.plugin.compose' version '9.9.9'
+}
+'''.stripIndent())
+        writeSettings()
+
+        def result = runner('help').buildAndFail()
+
+        assertTrue(result.output.contains('SimpleDSL plugin compatibility error'))
+        assertTrue(result.output.contains('Plugin: org.jetbrains.kotlin.plugin.compose'))
+        assertTrue(result.output.contains('Requested: 9.9.9'))
+        assertTrue(result.output.contains('Managed: 2.2.10'))
+    }
+
+    @Test
     void rejectsRemovedBuildPluginWithMigrationGuidance() {
         writeRootManifest('dependencies.toml', '''
 [simpledsl]
