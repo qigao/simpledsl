@@ -14,9 +14,6 @@ final class DependencyManifestLoader {
     static DependencyRegistry load(File rootManifest) {
         State state = new State()
         loadFile(rootManifest.canonicalFile, state, new LinkedHashSet<File>())
-        if (state.javaVersion == null) {
-            fail(rootManifest, null, null, 'missing simpledsl.java')
-        }
 
         Map<String, VersionSpec> versions = new LinkedHashMap<>()
         state.versionValues.each { id, raw ->
@@ -103,7 +100,7 @@ final class DependencyManifestLoader {
             plugins.put(alias, spec)
         }
 
-        new DependencyRegistry(state.javaVersion as int, versions, platforms, libraries, plugins, pluginsByGradleId)
+        new DependencyRegistry(state.javaVersion, versions, platforms, libraries, plugins, pluginsByGradleId)
     }
 
     private static void loadFile(File file, State state, LinkedHashSet<File> stack) {
@@ -141,13 +138,15 @@ final class DependencyManifestLoader {
         if (simpleDsl != null) {
             rejectUnknownKeys(simpleDsl.keySet() as Set<String>, ['java'] as Set, canonical, 'SimpleDSL', 'simpledsl')
             Object javaNode = simpleDsl.get('java')
-            if (!isInteger(javaNode)) {
-                fail(canonical, 'SimpleDSL', 'simpledsl', 'java must be an integer')
+            if (javaNode != null) {
+                if (!isInteger(javaNode)) {
+                    fail(canonical, 'SimpleDSL', 'simpledsl', 'java must be an integer')
+                }
+                if (state.javaVersion != null) {
+                    fail(canonical, 'SimpleDSL', 'simpledsl', 'duplicate simpledsl.java')
+                }
+                state.javaVersion = (javaNode as Number).intValue()
             }
-            if (state.javaVersion != null) {
-                fail(canonical, 'SimpleDSL', 'simpledsl', 'duplicate simpledsl.java')
-            }
-            state.javaVersion = (javaNode as Number).intValue()
         }
 
         parseVersions(optionalTable(parsed, 'versions', canonical, 'Versions', 'versions'), canonical, state)
