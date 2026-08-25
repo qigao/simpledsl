@@ -37,8 +37,9 @@ class SimpleDslJavaPluginTest {
         def extension = project.extensions.findByName('simpledsl')
         assertNotNull(extension)
         assertTrue(extension instanceof SimpleDslJavaExtension)
-        assertFalse(extension.metaClass.respondsTo(extension, 'androidApplication'))
-        assertFalse(extension.metaClass.respondsTo(extension, 'androidLibrary'))
+        def extensionMethods = extension.class.methods*.name as Set
+        assertFalse(extensionMethods.contains('androidApplication'))
+        assertFalse(extensionMethods.contains('androidLibrary'))
     }
 
     @Test
