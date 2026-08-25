@@ -116,6 +116,14 @@ plugins {
     private void writeSettings(String moduleName, Integer targetSdk) {
         String target = targetSdk == null ? 'null' : targetSdk.toString()
         Files.writeString(projectDir.resolve('settings.gradle'), """
+pluginManagement {
+    repositories {
+        google()
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
 import org.gradle.api.services.BuildService
 import org.gradle.api.services.BuildServiceParameters
 
@@ -139,14 +147,6 @@ abstract class TestDependencyRegistry implements BuildService<BuildServiceParame
 }
 
 gradle.sharedServices.registerIfAbsent('simpledslDependencyRegistry', TestDependencyRegistry) { }
-
-pluginManagement {
-    repositories {
-        google()
-        gradlePluginPortal()
-        mavenCentral()
-    }
-}
 
 rootProject.name = 'android-consumer'
 include '${moduleName}'
