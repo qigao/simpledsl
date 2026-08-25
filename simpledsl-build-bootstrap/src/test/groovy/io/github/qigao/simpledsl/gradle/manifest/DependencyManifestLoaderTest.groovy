@@ -52,7 +52,27 @@ version.ref = "spring-boot"
         assertEquals('4.1.0', registry.plugin('spring-boot').version)
         assertTrue(registry.snapshot().platforms.containsKey('spring-bom'))
         assertTrue(registry.snapshot().libraries.containsKey('spring-bom'))
-        assertEquals(1, registry.snapshot().schemaVersion)
+        assertEquals(2, registry.snapshot().schemaVersion)
+        assertEquals([java: [toolchain: 25]], registry.snapshot().policies)
+    }
+
+    @Test
+    void loadsManifestWithoutJavaPolicyAndExportsEmptyPolicies() {
+        Path manifest = tempDir.resolve('dependencies.toml')
+        Files.writeString(manifest, '''
+[versions]
+junit = "6.0.1"
+
+[libraries.junit]
+module = "org.junit.jupiter:junit-jupiter"
+version.ref = "junit"
+'''.stripIndent())
+
+        DependencyRegistry registry = DependencyManifestLoader.load(manifest.toFile())
+
+        assertEquals(2, registry.snapshot().schemaVersion)
+        assertEquals([:], registry.snapshot().policies)
+        assertEquals('org.junit.jupiter:junit-jupiter:6.0.1', registry.library('junit').notation())
     }
 
     @Test
