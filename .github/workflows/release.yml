@@ -40,7 +40,7 @@ jobs:
             :simpledsl-core:check \
             :simpledsl-java:check \
             publishToTestPluginRepository \
-            :integration-tests:test \
+            :integration-tests-java:test \
             -PreleaseVersion="$SIMPLEDSL_RELEASE_VERSION" \
             --stacktrace
 
