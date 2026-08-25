@@ -79,6 +79,86 @@ androidComponents.onVariants(androidComponents.selector().all()) { variant ->
     }
 
     @Test
+    void configuresComposeCapabilityForAndroidApplication() {
+        writeSettings('app', 36)
+        writeModule('app', androidPluginPrelude() + '''
+
+simpledsl {
+    androidApplication {
+        namespace = 'example.compose.app'
+    }
+    compose()
+}
+
+assert pluginManager.hasPlugin('org.jetbrains.kotlin.plugin.compose')
+assert !pluginManager.hasPlugin('org.jetbrains.kotlin.android')
+
+def model = extensions.getByName('simpledslModuleModel')
+assert model.capabilities.get().contains('compose')
+assert model.platformBindings.get().contains('implementation:compose')
+
+def androidDsl = extensions.getByName('android')
+def androidComponents = extensions.getByName('androidComponents')
+androidComponents.onVariants(androidComponents.selector().all()) { variant ->
+    assert androidDsl.buildFeatures.compose
+}
+''')
+
+        BuildResult result = build(':app:help')
+
+        assertOutputContains(result, 'BUILD SUCCESSFUL')
+    }
+
+    @Test
+    void configuresComposeCapabilityForAndroidLibrary() {
+        writeSettings('feature', null)
+        writeModule('feature', androidPluginPrelude() + '''
+
+simpledsl {
+    androidLibrary {
+        namespace = 'example.compose.feature'
+    }
+    compose()
+}
+
+assert pluginManager.hasPlugin('org.jetbrains.kotlin.plugin.compose')
+assert !pluginManager.hasPlugin('org.jetbrains.kotlin.android')
+
+def model = extensions.getByName('simpledslModuleModel')
+assert model.capabilities.get().contains('compose')
+assert model.platformBindings.get().contains('implementation:compose')
+
+def androidDsl = extensions.getByName('android')
+def androidComponents = extensions.getByName('androidComponents')
+androidComponents.onVariants(androidComponents.selector().all()) { variant ->
+    assert androidDsl.buildFeatures.compose
+}
+''')
+
+        BuildResult result = build(':feature:help')
+
+        assertOutputContains(result, 'BUILD SUCCESSFUL')
+    }
+
+    @Test
+    void rejectsComposeCapabilityWithoutAndroidModuleType() {
+        writeSettings('feature', 36)
+        writeModule('feature', androidPluginPrelude() + '''
+
+simpledsl {
+    compose()
+}
+''')
+
+        BuildResult result = buildAndFail(':feature:help')
+
+        assertOutputContains(result, 'Capability: compose')
+        assertOutputContains(result, 'requires a module type')
+        assertOutputContains(result, 'android-application')
+        assertOutputContains(result, 'android-library')
+    }
+
+    @Test
     void rejectsApplicationPolicyWithoutTargetSdk() {
         writeSettings('app', null)
         writeModule('app', androidPluginPrelude() + '''
@@ -147,8 +227,24 @@ abstract class TestDependencyRegistry implements BuildService<BuildServiceParame
                     targetSdk: ${target}
                 ]
             ],
-            platforms: [:],
-            libraries: [:],
+            platforms: [
+                compose: [
+                    module: 'androidx.compose:compose-bom',
+                    version: '2026.06.00'
+                ]
+            ],
+            libraries: [
+                'compose-runtime': [
+                    module: 'androidx.compose.runtime:runtime',
+                    version: null,
+                    platform: 'compose'
+                ],
+                'compose-ui': [
+                    module: 'androidx.compose.ui:ui',
+                    version: null,
+                    platform: 'compose'
+                ]
+            ],
             plugins: [:]
         ]
     }
