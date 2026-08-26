@@ -1,0 +1,17 @@
+plugins {
+    id 'io.github.qigao.simpledsl.android'
+}
+
+simpledsl {
+    androidDynamicFeature {
+        namespace = 'example.payments'
+        baseModule = ':app'
+    }
+}
+
+assert pluginManager.hasPlugin('com.android.dynamic-feature')
+assert !pluginManager.hasPlugin('org.jetbrains.kotlin.android')
+assert extensions.getByName('simpledslModuleModel').moduleType.get() == 'android-dynamic-feature'
+assert configurations.getByName('implementation').dependencies.any {
+    it instanceof org.gradle.api.artifacts.ProjectDependency && it.path == ':app'
+}

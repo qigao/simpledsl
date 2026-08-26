@@ -25,6 +25,7 @@ class PublishedAndroidConsumerContractTest {
         List<String> arguments = consumerArguments(
                 ':app:simpledslAndroidVariants',
                 ':feature:simpledslAndroidVariants',
+                ':payments:simpledslAndroidVariants',
                 ':app:simpledslCapabilities',
                 ':feature:simpledslCapabilities')
 
@@ -50,12 +51,12 @@ class PublishedAndroidConsumerContractTest {
     }
 
     @Test
-    void assemblesPublishedAndroidApplicationAndLibraryWithRoomAndHiltCodegen() {
-        File fixture = copyFixture('published-android-room-hilt-assemble')
+    void bundlesPublishedAndroidApplicationWithRoomHiltAndDynamicFeature() {
+        File fixture = copyFixture('published-android-room-hilt-dynamic-feature-bundle')
 
         BuildResult result = build(
                 fixture,
-                consumerArguments(':app:assembleDebug', ':feature:assembleDebug'))
+                consumerArguments(':app:bundleDebug', ':feature:assembleDebug'))
 
         assertTrue(result.output.contains('BUILD SUCCESSFUL'))
 
@@ -86,6 +87,26 @@ class PublishedAndroidConsumerContractTest {
         assertTrue(
                 generatedHiltApplication,
                 "Hilt did not generate Hilt_ExampleApplication.java under ${hiltGeneratedRoot}".toString())
+
+        Path bundleRoot = fixture.toPath().resolve('app/build/outputs/bundle/debug')
+        assertTrue(
+                Files.isDirectory(bundleRoot),
+                "Debug App Bundle output directory was not generated: ${bundleRoot}".toString())
+
+        List<Path> bundles = Files.walk(bundleRoot).withCloseable { paths ->
+            paths.filter { Path path ->
+                Files.isRegularFile(path) && path.fileName.toString().endsWith('.aab')
+            }.toList()
+        }
+        assertTrue(
+                bundles.size() == 1,
+                "Expected one debug AAB under ${bundleRoot}, found ${bundles}".toString())
+
+        new java.util.zip.ZipFile(bundles[0].toFile()).withCloseable { zip ->
+            assertTrue(
+                    zip.getEntry('payments/manifest/AndroidManifest.xml') != null,
+                    'Debug AAB does not contain the payments Dynamic Feature manifest')
+        }
     }
 
     private static BuildResult build(File fixture, List<String> arguments) {

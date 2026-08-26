@@ -5,6 +5,7 @@ plugins {
 simpledsl {
     androidApplication {
         namespace = 'example.app'
+        dynamicFeature(':payments')
     }
     jetpackCompose()
     room()
