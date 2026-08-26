@@ -6,6 +6,7 @@ import io.github.qigao.simpledsl.gradle.android.module.SimpleDslAndroidApplicati
 import io.github.qigao.simpledsl.gradle.android.module.SimpleDslAndroidDynamicFeaturePlugin
 import io.github.qigao.simpledsl.gradle.android.module.SimpleDslAndroidLibraryPlugin
 import io.github.qigao.simpledsl.gradle.capability.CapabilityEngine
+import io.github.qigao.simpledsl.gradle.dependency.DependencyBridge
 import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
 import org.gradle.api.Action
 import org.gradle.api.GradleException
@@ -54,6 +55,14 @@ class SimpleDslAndroidExtension {
         SimpleDslAndroidDynamicFeatureSpec spec = createDynamicFeatureSpec()
         configure(spec, closure)
         project.pluginManager.apply(SimpleDslAndroidDynamicFeaturePlugin)
+    }
+
+    void dependsOn(String projectPath) {
+        DependencyBridge.addProject(project, 'implementation', projectPath)
+    }
+
+    void dependsOn(String configuration, String projectPath) {
+        DependencyBridge.addProject(project, configuration, projectPath)
     }
 
     void capability(String capabilityId) {

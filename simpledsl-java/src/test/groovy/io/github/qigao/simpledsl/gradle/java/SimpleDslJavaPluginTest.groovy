@@ -3,6 +3,7 @@ package io.github.qigao.simpledsl.gradle.java
 import io.github.qigao.simpledsl.gradle.catalog.CatalogLibrary
 import io.github.qigao.simpledsl.gradle.catalog.DependencyCatalogSnapshot
 import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
+import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.testfixtures.ProjectBuilder
 import org.junit.jupiter.api.Test
 
@@ -54,8 +55,35 @@ class SimpleDslJavaPluginTest {
         assertFalse(methods.contains('androidLibrary'))
     }
 
+    @Test
+    void javaBackendSupportsSharedModuleDependencies() {
+        def root = ProjectBuilder.builder().withName('root').build()
+        ProjectBuilder.builder().withName('user').withParent(root).build()
+        ProjectBuilder.builder().withName('model').withParent(root).build()
+        def order = ProjectBuilder.builder().withName('order').withParent(root).build()
+        addCatalog(order)
+
+        order.pluginManager.apply(SimpleDslJavaPlugin)
+        def extension = order.extensions.getByName('simpledsl') as SimpleDslJavaExtension
+        extension.javaLibrary()
+        extension.dependsOn(':user')
+        extension.dependsOn('api', ':model')
+
+        assertTrue(order.configurations.getByName('implementation').dependencies.any {
+            it instanceof ProjectDependency && it.path == ':user'
+        })
+        assertTrue(order.configurations.getByName('api').dependencies.any {
+            it instanceof ProjectDependency && it.path == ':model'
+        })
+    }
+
     private static def javaProject() {
         def project = ProjectBuilder.builder().withName('app').build()
+        addCatalog(project)
+        project
+    }
+
+    private static void addCatalog(def project) {
         project.extensions.add(
                 DependencyCatalogSnapshot,
                 'simpledslDependencyCatalog',
@@ -69,6 +97,5 @@ class SimpleDslJavaPluginTest {
                                         'junit-platform-launcher', 'org.junit.platform:junit-platform-launcher', '1.13.4', null)
                         ],
                         [:]))
-        project
     }
 }

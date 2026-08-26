@@ -32,6 +32,14 @@ class SimpleDslJavaExtension {
         DependencyBridge.add(project, model, configuration, alias)
     }
 
+    void dependsOn(String projectPath) {
+        DependencyBridge.addProject(project, 'implementation', projectPath)
+    }
+
+    void dependsOn(String configuration, String projectPath) {
+        DependencyBridge.addProject(project, configuration, projectPath)
+    }
+
     void capability(String capabilityId) {
         project.extensions.getByType(CapabilityEngine).enable(capabilityId)
     }
