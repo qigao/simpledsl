@@ -41,7 +41,7 @@ gradlePlugin {
             id = "io.github.qigao.simpledsl.java"
             implementationClass = "io.github.qigao.simpledsl.gradle.java.SimpleDslJavaPlugin"
             displayName = "SimpleDSL Java"
-            description = "SimpleDSL Java and Spring build backend"
+            description = "SimpleDSL Java and Spring build backend with automatic module discovery, dependency policy, capabilities, and shared dependsOn(...) module dependencies"
             tags = listOf("build-platform", "java", "spring")
             compatibility {
                 features { configurationCache = true }

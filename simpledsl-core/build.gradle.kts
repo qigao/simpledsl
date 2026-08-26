@@ -79,7 +79,7 @@ gradlePlugin {
             id = "io.github.qigao.simpledsl.settings"
             implementationClass = "io.github.qigao.simpledsl.gradle.settings.SimpleDslSettingsPlugin"
             displayName = "SimpleDSL Settings"
-            description = "SimpleDSL dependency manifest and module discovery settings plugin"
+            description = "SimpleDSL repository dependency policy and automatic module discovery for Java/Spring and Android builds"
             tags = listOf("build-platform", "module-discovery")
             compatibility {
                 features {
