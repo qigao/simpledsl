@@ -251,6 +251,11 @@ gradle.sharedServices.registerIfAbsent('simpledslDependencyRegistry', TestDepend
 rootProject.name = 'dynamic-feature-consumer'
 include 'app', 'payments'
 '''.stripIndent())
+
+        ['app', 'payments'].each { name ->
+            Path module = Files.createDirectories(projectDir.resolve(name))
+            Files.writeString(module.resolve('build.gradle'), '')
+        }
     }
 
     private void writeApp(String buildScript) {
