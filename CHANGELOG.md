@@ -2,7 +2,7 @@
 
 ## Unreleased - 0.3.0 development
 
-SimpleDSL 0.3.0 is evolving the project side into independent build backends. Phase A established the shared core and Java backend; Phase B added the Android backend foundation; Phase C added Jetpack Compose; Phase D added the KSP foundation; Phase E adds Room on top of that foundation without expanding the generic capability model. The release is still in development and has not been tagged.
+SimpleDSL 0.3.0 is evolving the project side into independent build backends. Phase A established the shared core and Java backend; Phase B added the Android backend foundation; Phase C added Jetpack Compose; Phase D added the KSP foundation; Phase E added Room; Phase F adds Hilt while continuing to reuse the same generic capability model. The release is still in development and has not been tagged.
 
 ### Phase A: shared core and Java backend
 
@@ -56,7 +56,7 @@ SimpleDSL 0.3.0 is evolving the project side into independent build backends. Ph
 - Kept KSP Gradle tooling Android-only and extended published backend isolation to forbid it in core/Java and require it in the Android artifact.
 - Added real published consumers: the application activates `ksp()` while the library exercises `capability('ksp')`; both prove the KSP plugin and standard `ksp` configuration are available alongside Compose and AGP built-in Kotlin.
 - Published-consumer CI continues to compile real Kotlin/Compose sources, assemble application/library debug artifacts, and reuse Gradle configuration cache with KSP active.
-- Established the composition point used by later code-generation capabilities: `requires('ksp')` plus a dependency bound to the `ksp` configuration.
+- Established the composition point used by later code-generation capabilities: `require('ksp')` plus a dependency bound to the `ksp` configuration.
 
 ### Phase E: Room capability
 
@@ -72,6 +72,22 @@ SimpleDSL 0.3.0 is evolving the project side into independent build backends. Ph
 - Added real Room3 Kotlin source (`@Entity`, `@Dao`, and `@Database`) to the published application and verify KSP generates `AppDatabase_Impl.kt` before the debug application/library artifacts are assembled.
 - Preserved configuration-cache reuse, Compose coexistence, backend isolation, and the existing publication model; Room runtime/compiler remain consumer dependencies rather than Android plugin tooling dependencies.
 - TDD/CI chronology: CI #180 is the test-only RED contract, CI #181 is GREEN for the minimal production capability, and CI #182 is GREEN for real published Room3 code generation.
+
+### Phase F: Hilt capability
+
+- Added semantic Android capability `hilt`, valid for `android-application` and `android-library` modules.
+- Added public DSL sugar `hilt()` and equivalent generic entry `capability('hilt')`.
+- Pinned the validated Dagger/Hilt baseline to 2.60.1. Dagger 2.59 introduced Hilt Gradle Plugin support for AGP 9; Phase F selects the current stable 2.60.1 line.
+- Added settings ownership for `com.google.dagger.hilt.android` using `com.google.dagger:hilt-android-gradle-plugin`, so incompatible consumer plugin-version overrides fail through the existing SimpleDSL compatibility diagnostic.
+- Added Hilt Gradle tooling only to `simpledsl-android`; backend isolation forbids it in core/Java and requires it in the Android publication.
+- Defined Hilt entirely from existing capability primitives: `require('ksp')`, `externalPluginId('com.google.dagger.hilt.android')`, `dependency('implementation', 'hilt-android')`, and `dependency('ksp', 'hilt-compiler')`.
+- Kept `CapabilitySpec`, `CapabilityEngine`, `DependencyBridge`, and the generic core capability model unchanged. No Hilt configurer, activation callback, processor DSL, or generic code-generation abstraction was added.
+- Kept AGP 9.0.1 built-in Kotlin and KSP2 2.3.9; consumers do not apply `org.jetbrains.kotlin.android`, KAPT, or `ksp()` explicitly.
+- Kept `hilt-android` and `hilt-compiler` as repository-policy consumer dependencies rather than Android backend runtime/compiler dependencies; only the Hilt **Gradle plugin** is backend tooling.
+- Extended the real published app/library consumers: the application uses `hilt()` and the library uses `capability('hilt')`, both alongside Room and Compose, proving transitive KSP activation and Hilt runtime/compiler bindings.
+- Added a real `@HiltAndroidApp` application and verify the Hilt Gradle pipeline generates `Hilt_ExampleApplication.java` under `build/generated/hilt/component_sources`, while the existing Room proof still verifies `AppDatabase_Impl.kt` under `build/generated/ksp`.
+- Preserved configuration-cache store/reuse and app/library debug assembly with both Room and Hilt processors active in the same build.
+- TDD/CI chronology: CI #186 is the capability test-only RED; CI #187 adds the independent settings-version RED; CI #188 is GREEN for minimal production wiring and existing consumers; CI #189 confirms real Hilt assembly/code generation but exposes an incorrect test assumption that Hilt aggregate sources live under the KSP output directory; CI #190 is GREEN after correcting the proof to Hilt's actual `build/generated/hilt/component_sources` output.
 
 ### 0.2.x to 0.3.0 Java migration
 
@@ -103,6 +119,7 @@ target-sdk = 36
 [versions]
 compose-bom = "2026.06.00"
 room3 = "3.0.1"
+hilt = "2.60.1"
 
 [libraries.compose]
 module = "androidx.compose:compose-bom"
@@ -123,9 +140,17 @@ version.ref = "room3"
 [libraries.room-compiler]
 module = "androidx.room3:room3-compiler"
 version.ref = "room3"
+
+[libraries.hilt-android]
+module = "com.google.dagger:hilt-android"
+version.ref = "hilt"
+
+[libraries.hilt-compiler]
+module = "com.google.dagger:hilt-compiler"
+version.ref = "hilt"
 ```
 
-Application with Compose and Room:
+Application with Compose, Room, and Hilt:
 
 ```groovy
 plugins {
@@ -138,6 +163,7 @@ simpledsl {
     }
     jetpackCompose()
     room()
+    hilt()
 }
 ```
 
@@ -153,12 +179,13 @@ simpledsl {
         namespace = 'com.example.feature'
     }
     capability('room')
+    capability('hilt')
 }
 ```
 
 ### Later Android phases
 
-Hilt, KMP, dynamic features, benchmark module types, custom artifact transforms, and per-module SDK overrides remain later work. The Room Gradle plugin/schema lifecycle, legacy variant APIs, task-name guessing, KSP1, KAPT, Room 2.x compatibility, and built-in-Kotlin opt-outs remain out of scope by design.
+KMP, dynamic features, benchmark module types, custom artifact transforms, and per-module SDK overrides remain later work. The Room Gradle plugin/schema lifecycle, Hilt testing/Navigation/custom-component abstractions, legacy variant APIs, task-name guessing, KSP1, KAPT, Room 2.x compatibility, and built-in-Kotlin opt-outs remain out of scope by design.
 
 ---
 
