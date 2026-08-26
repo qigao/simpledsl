@@ -49,7 +49,7 @@ gradlePlugin {
             id = "io.github.qigao.simpledsl.android"
             implementationClass = "io.github.qigao.simpledsl.gradle.android.SimpleDslAndroidPlugin"
             displayName = "SimpleDSL Android"
-            description = "SimpleDSL Android build backend"
+            description = "SimpleDSL Android build backend with application, library, and Dynamic Feature modules, Compose/KSP/Room/Hilt capabilities, and shared dependsOn(...) module dependencies"
             tags = listOf("build-platform", "android")
             compatibility {
                 features { configurationCache = true }
