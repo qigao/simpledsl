@@ -17,6 +17,7 @@ final class SimpleDslDistribution {
             'org.jsonschema2pojo'                    : 'org.jsonschema2pojo:jsonschema2pojo-gradle-plugin',
             'com.android.application'                : 'com.android.tools.build:gradle',
             'com.android.library'                    : 'com.android.tools.build:gradle',
+            'com.android.dynamic-feature'            : 'com.android.tools.build:gradle',
             'org.jetbrains.kotlin.plugin.compose'   : 'org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin',
             'com.google.devtools.ksp'               : 'com.google.devtools.ksp:symbol-processing-gradle-plugin',
             'com.google.dagger.hilt.android'        : 'com.google.dagger:hilt-android-gradle-plugin'
@@ -29,6 +30,7 @@ final class SimpleDslDistribution {
             'org.jsonschema2pojo'                  : 'jsonschema2pojoPluginVersion',
             'com.android.application'              : 'androidGradlePluginVersion',
             'com.android.library'                  : 'androidGradlePluginVersion',
+            'com.android.dynamic-feature'          : 'androidGradlePluginVersion',
             'org.jetbrains.kotlin.plugin.compose' : 'kotlinVersion',
             'com.google.devtools.ksp'             : 'kspVersion',
             'com.google.dagger.hilt.android'      : 'hiltVersion'

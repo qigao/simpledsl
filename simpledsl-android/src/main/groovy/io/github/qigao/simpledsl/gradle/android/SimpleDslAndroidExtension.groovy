@@ -3,6 +3,7 @@ package io.github.qigao.simpledsl.gradle.android
 import io.github.qigao.simpledsl.gradle.android.capability.BuiltinAndroidCapabilities
 import io.github.qigao.simpledsl.gradle.android.capability.ComposeCapabilityConfigurer
 import io.github.qigao.simpledsl.gradle.android.module.SimpleDslAndroidApplicationPlugin
+import io.github.qigao.simpledsl.gradle.android.module.SimpleDslAndroidDynamicFeaturePlugin
 import io.github.qigao.simpledsl.gradle.android.module.SimpleDslAndroidLibraryPlugin
 import io.github.qigao.simpledsl.gradle.capability.CapabilityEngine
 import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
@@ -43,6 +44,18 @@ class SimpleDslAndroidExtension {
         project.pluginManager.apply(SimpleDslAndroidLibraryPlugin)
     }
 
+    void androidDynamicFeature(Action<? super SimpleDslAndroidDynamicFeatureSpec> action) {
+        SimpleDslAndroidDynamicFeatureSpec spec = createDynamicFeatureSpec()
+        action.execute(spec)
+        project.pluginManager.apply(SimpleDslAndroidDynamicFeaturePlugin)
+    }
+
+    void androidDynamicFeature(Closure closure) {
+        SimpleDslAndroidDynamicFeatureSpec spec = createDynamicFeatureSpec()
+        configure(spec, closure)
+        project.pluginManager.apply(SimpleDslAndroidDynamicFeaturePlugin)
+    }
+
     void capability(String capabilityId) {
         project.extensions.getByType(CapabilityEngine).enable(capabilityId)
         configureBackendCapability(capabilityId)
@@ -72,9 +85,11 @@ class SimpleDslAndroidExtension {
 
     private SimpleDslAndroidApplicationSpec createApplicationSpec() {
         rejectDuplicateModuleDeclaration()
-        project.extensions.create(
+        SimpleDslAndroidApplicationSpec spec = project.extensions.create(
                 SimpleDslAndroidApplicationPlugin.SPEC_EXTENSION,
                 SimpleDslAndroidApplicationSpec)
+        spec.dynamicFeatures.convention(Collections.emptySet())
+        spec
     }
 
     private SimpleDslAndroidLibrarySpec createLibrarySpec() {
@@ -84,9 +99,17 @@ class SimpleDslAndroidExtension {
                 SimpleDslAndroidLibrarySpec)
     }
 
+    private SimpleDslAndroidDynamicFeatureSpec createDynamicFeatureSpec() {
+        rejectDuplicateModuleDeclaration()
+        project.extensions.create(
+                SimpleDslAndroidDynamicFeaturePlugin.SPEC_EXTENSION,
+                SimpleDslAndroidDynamicFeatureSpec)
+    }
+
     private void rejectDuplicateModuleDeclaration() {
         if (project.extensions.findByName(SimpleDslAndroidApplicationPlugin.SPEC_EXTENSION) != null ||
-                project.extensions.findByName(SimpleDslAndroidLibraryPlugin.SPEC_EXTENSION) != null) {
+                project.extensions.findByName(SimpleDslAndroidLibraryPlugin.SPEC_EXTENSION) != null ||
+                project.extensions.findByName(SimpleDslAndroidDynamicFeaturePlugin.SPEC_EXTENSION) != null) {
             throw new GradleException(
                     'SimpleDSL Android configuration error\n' +
                     "Project: ${project.path}\n" +

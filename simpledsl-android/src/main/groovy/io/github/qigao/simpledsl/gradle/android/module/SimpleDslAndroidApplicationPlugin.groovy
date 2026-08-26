@@ -23,6 +23,9 @@ final class SimpleDslAndroidApplicationPlugin implements Plugin<Project> {
         String namespace = SimpleDslAndroidBase.requireNamespace(project, spec.namespace)
         String applicationId = spec.applicationId.isPresent() ? spec.applicationId.get().trim() : namespace
         if (applicationId.isEmpty()) applicationId = namespace
+        Set<String> dynamicFeatures = SimpleDslAndroidBase.requireDynamicFeaturePaths(
+                project,
+                spec.dynamicFeatures.getOrElse(Collections.emptySet()))
 
         project.pluginManager.apply('com.android.application')
         ApplicationExtension android = project.extensions.getByType(ApplicationExtension)
@@ -33,6 +36,7 @@ final class SimpleDslAndroidApplicationPlugin implements Plugin<Project> {
         android.defaultConfig.applicationId = applicationId
         android.compileOptions.sourceCompatibility = SimpleDslAndroidBase.javaVersion(policy)
         android.compileOptions.targetCompatibility = SimpleDslAndroidBase.javaVersion(policy)
+        android.dynamicFeatures.addAll(dynamicFeatures)
 
         ApplicationAndroidComponentsExtension components =
                 project.extensions.getByType(ApplicationAndroidComponentsExtension)

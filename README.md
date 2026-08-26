@@ -2,7 +2,7 @@
 
 SimpleDSL is a Gradle build platform for repository dependency policy and module-oriented builds. The 0.3.0 development line separates backend-neutral infrastructure from independent Java/Spring and Android project backends.
 
-> **Development status:** Phase A (shared core + Java backend), Phase B (Android backend foundation), Phase C (Compose), Phase D (KSP foundation), Phase E (Room), and Phase F (Hilt) are implemented on this branch. `0.3.0` is still under development and has not been released. Other Android capabilities remain later work.
+> **Development status:** Phase A (shared core + Java backend), Phase B (Android backend foundation), Phase C (Compose), Phase D (KSP foundation), Phase E (Room), Phase F (Hilt), and the Android Dynamic Feature module foundation are implemented on this branch. `0.3.0` is still under development and has not been released. Other Android capabilities remain later work.
 
 ## Requirements
 
@@ -30,7 +30,7 @@ io.github.qigao.simpledsl.android
 
 `io.github.qigao.simpledsl.java` is the Java/Spring project backend.
 
-`io.github.qigao.simpledsl.android` is the Android project backend. It owns Android application/library module configuration and AGP public API integration.
+`io.github.qigao.simpledsl.android` is the Android project backend. It owns Android application, library, and Dynamic Feature module configuration and AGP public API integration.
 
 The 0.2.x project marker `io.github.qigao.simpledsl.build` is removed in 0.3.0. Java consumers migrate to `io.github.qigao.simpledsl.java`.
 
@@ -63,7 +63,7 @@ dependencyResolutionManagement {
 }
 ```
 
-The settings plugin resolves the Java and Android backends to the same SimpleDSL release version. An explicitly requested conflicting backend version fails with a `SimpleDSL version conflict` diagnostic. Settings also owns external build-tool versions such as AGP, the Compose Compiler plugin, KSP, and the Hilt Gradle plugin so module-local incompatible overrides fail early.
+The settings plugin resolves the Java and Android backends to the same SimpleDSL release version. An explicitly requested conflicting backend version fails with a `SimpleDSL version conflict` diagnostic. Settings also owns external build-tool versions such as AGP, the Compose Compiler plugin, KSP, and the Hilt Gradle plugin so module-local incompatible overrides fail early. `com.android.application`, `com.android.library`, and `com.android.dynamic-feature` all resolve to the same managed AGP 9.0.1 baseline.
 
 ### Java/Spring backend
 
@@ -101,7 +101,7 @@ min-sdk = 24
 target-sdk = 36
 ```
 
-`target-sdk` is optional for an Android-library-only repository, but `androidApplication()` requires it.
+`target-sdk` is optional for module types that do not own an application target, but `androidApplication()` requires it.
 
 Application module:
 
@@ -142,9 +142,51 @@ simpledsl {
 }
 ```
 
-The backend applies `com.android.application` or `com.android.library` and configures only AGP 9 public DSL/API surfaces (`ApplicationExtension`, `LibraryExtension`, and Android Components APIs). It does not use legacy `BaseExtension`, `AppExtension`, `applicationVariants`, or task-name guessing.
+The backend applies the managed AGP plugin appropriate to the declared module type and configures only AGP 9 public DSL/API surfaces. It does not use legacy `BaseExtension`, `AppExtension`, `applicationVariants`, or task-name guessing.
 
 The Android Java policy controls `compileOptions.sourceCompatibility` and `targetCompatibility`. AGP 9 built-in Kotlin inherits the compatible JVM target; SimpleDSL does not apply a second Kotlin Android plugin.
+
+### Android Dynamic Feature module
+
+Dynamic Feature topology is explicit and bilateral. The base application declares the feature project path:
+
+```groovy
+// :app
+plugins {
+    id 'io.github.qigao.simpledsl.android'
+}
+
+simpledsl {
+    androidApplication {
+        namespace = 'com.example.app'
+        dynamicFeature(':payments')
+    }
+}
+```
+
+The feature declares its base application independently:
+
+```groovy
+// :payments
+plugins {
+    id 'io.github.qigao.simpledsl.android'
+}
+
+simpledsl {
+    androidDynamicFeature {
+        namespace = 'com.example.payments'
+        baseModule = ':app'
+    }
+}
+```
+
+The application side owns AGP's `dynamicFeatures` set. The Dynamic Feature side owns its normal Gradle `implementation` project dependency on `baseModule`. SimpleDSL does not mutate the other project, evaluate it eagerly, or encode project topology into repository policy/snapshot schema. Paths must be absolute Gradle project paths, and self-references fail with SimpleDSL diagnostics.
+
+`androidDynamicFeature` is a third Android **module type**, not a capability. It reuses the repository Android policy baseline: AGP 9.0.1, compileSdk 36, minSdk 24, and Java 21. The backend integrates through public `DynamicFeatureExtension` and `DynamicFeatureAndroidComponentsExtension`; AGP 9 built-in Kotlin remains active and `org.jetbrains.kotlin.android` is not applied.
+
+Compose, KSP, Room, and Hilt remain intentionally restricted to `android-application` and `android-library`. Enabling one on `android-dynamic-feature` fails through the existing capability/module-type diagnostic. Feature-specific capability support, delivery-mode DSL, and Hilt feature injection are later work rather than implicit behavior in this foundation.
+
+The real published-consumer proof builds a base application plus `:payments`, compiles Kotlin in the feature against a symbol from the base app, runs `:app:bundleDebug`, and opens the generated `.aab` to require `payments/manifest/AndroidManifest.xml`. App Bundle `versionCode` remains base-application publication metadata; the feature inherits it rather than declaring its own version.
 
 ### Compose capability
 
@@ -178,7 +220,7 @@ simpledsl {
 }
 ```
 
-`jetpackCompose()` is the Android DSL sugar for the semantic capability ID `compose`; `capability('compose')` is equivalent. The public sugar is intentionally not named bare `compose()` because a Gradle Groovy configuration closure already inherits Groovy's `Closure.compose(Closure)` method, which collides with a zero-argument DSL method.
+`jetpackCompose()` is the Android DSL sugar for the semantic capability ID `compose`; `capability('compose')` is equivalent. The public sugar is intentionally not named bare `compose()` because a Gradle Groovy configuration closure already inherits Groovy's existing `Closure.compose(Closure)` method, which collides with the intended zero-argument method.
 
 The capability applies the managed `org.jetbrains.kotlin.plugin.compose` plugin, enables `buildFeatures.compose` through AGP public DSL, and binds `compose-runtime` / `compose-ui` through the existing dependency bridge. Because those aliases reference platform `compose`, the BOM is activated automatically and recorded as `implementation:compose`. Module build files do not apply `org.jetbrains.kotlin.android` or declare Compose versions directly.
 
@@ -290,7 +332,7 @@ The real published consumer combines Compose, Room, and Hilt in one application.
 
 ### Android Components proof surface
 
-Application and library modules expose:
+Application, library, and Dynamic Feature modules expose:
 
 ```text
 simpledslAndroidVariants
@@ -300,9 +342,10 @@ For example:
 
 ```bash
 ./gradlew :app:simpledslAndroidVariants
+./gradlew :payments:simpledslAndroidVariants
 ```
 
-The task is populated through `beforeVariants`/`onVariants` on the public Android Components API and stores only serializable variant-name inputs, so it is compatible with Gradle configuration cache.
+The task is populated through `beforeVariants`/`onVariants` on each module type's public Android Components API and stores only serializable variant-name inputs, so it is compatible with Gradle configuration cache.
 
 ## Dependency manifest
 
@@ -368,6 +411,8 @@ java = 25
 It is optional during Settings evaluation and becomes required only when the Java backend is used.
 
 Android policy is exported independently from `[simpledsl.android]`. This allows, for example, a monorepo to use Java 25 for server modules and Java 21 for Android modules without coupling their backend policies.
+
+Dynamic Feature topology is deliberately not part of snapshot schema v2. `dynamicFeature(':path')` and `baseModule = ':path'` are module-local Gradle topology declarations.
 
 ## Module discovery
 
@@ -448,7 +493,7 @@ simpledslCapabilities
 simpledslDoctor
 ```
 
-Android additionally exposes `simpledslAndroidVariants` as the public Android Components proof task. Compose + Room + Hilt activation appears in `simpledslCapabilities` as `Features: compose,hilt,ksp,room`: `ksp` is present because Room and Hilt require it transitively, while Compose continues to report `Platform bindings: implementation:compose`.
+Android additionally exposes `simpledslAndroidVariants` as the public Android Components proof task. Compose + Room + Hilt activation appears in `simpledslCapabilities` as `Features: compose,hilt,ksp,room`: `ksp` is present because Room and Hilt require it transitively, while Compose continues to report `Platform bindings: implementation:compose`. Dynamic Feature modules keep those capability allow-lists unchanged and report their own module type as `android-dynamic-feature`.
 
 ## Artifact and publication model
 
@@ -480,7 +525,7 @@ Room and Hilt runtime/compiler libraries are consumer dependencies selected thro
 
 ## Development verification
 
-The Phase F verification contract is:
+The 0.3.0 Android verification contract is:
 
 ```bash
 ./gradlew clean \
@@ -495,7 +540,7 @@ The Phase F verification contract is:
   --stacktrace
 ```
 
-The Android published-consumer suite does not use `includeBuild` or `withPluginClasspath()`. It resolves the settings and Android plugins from the isolated Maven repository, resolves AGP, the Compose Compiler plugin, KSP, and Hilt through the managed settings/publication contract, verifies variants/capabilities/configuration-cache reuse, and assembles real application/library debug artifacts. The application combines Compose, `room()`, and `hilt()`, verifies both Room KSP output and Hilt generated component sources, while the library exercises `capability('room')` and `capability('hilt')`. Neither consumer applies KSP directly, so the suite proves transitive KSP activation for both processor-backed capabilities.
+The Android published-consumer suite does not use `includeBuild` or `withPluginClasspath()`. It resolves the settings and Android plugins from the isolated Maven repository, resolves AGP, the Compose Compiler plugin, KSP, and Hilt through the managed settings/publication contract, and verifies variants/capabilities/configuration-cache reuse. The base application combines Compose, `room()`, and `hilt()` while owning `dynamicFeature(':payments')`; `:payments` is a real `androidDynamicFeature` consumer with a base-app Kotlin compile edge. The suite preserves Room KSP and Hilt generated-source proofs, builds the library consumer, creates the base application's debug App Bundle, and inspects the `.aab` for the `payments` module manifest. Neither application nor library applies KSP directly, so the suite continues to prove transitive KSP activation for both processor-backed capabilities.
 
 `validatePlugins` runs as part of each plugin project's `check`. The release workflow performs the same isolated distribution verification before any Plugin Portal upload; it does not rely on fake credentials or a local `publishPlugins --validate-only` shortcut.
 
