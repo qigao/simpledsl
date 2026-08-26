@@ -50,17 +50,20 @@ assert androidDsl.namespace == 'example.payments'
 assert androidDsl.compileSdk == 36
 assert androidDsl.defaultConfig.minSdk == 24
 
-extensions.getByName('androidComponents').finalizeDsl { finalizedDsl ->
-    assert finalizedDsl.compileOptions.sourceCompatibility == JavaVersion.VERSION_21
-    assert finalizedDsl.compileOptions.targetCompatibility == JavaVersion.VERSION_21
-}
-
 assert configurations.getByName('implementation').dependencies.any {
     it instanceof org.gradle.api.artifacts.ProjectDependency && it.path == ':app'
 }
+
+tasks.register('verifyDynamicFeaturePolicy') {
+    doLast {
+        def finalizedAndroidDsl = project.extensions.getByName('android')
+        assert finalizedAndroidDsl.compileOptions.sourceCompatibility == JavaVersion.VERSION_21
+        assert finalizedAndroidDsl.compileOptions.targetCompatibility == JavaVersion.VERSION_21
+    }
+}
 ''')
 
-        BuildResult result = build(':payments:help')
+        BuildResult result = build(':payments:verifyDynamicFeaturePolicy')
 
         assertOutputContains(result, 'BUILD SUCCESSFUL')
     }
