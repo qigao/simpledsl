@@ -6,6 +6,7 @@ target-sdk = 36
 
 [versions]
 compose-bom = "2026.06.00"
+room3 = "3.0.1"
 
 [libraries.compose]
 module = "androidx.compose:compose-bom"
@@ -18,3 +19,11 @@ platform = "compose"
 [libraries.compose-ui]
 module = "androidx.compose.ui:ui"
 platform = "compose"
+
+[libraries.room-runtime]
+module = "androidx.room3:room3-runtime"
+version.ref = "room3"
+
+[libraries.room-compiler]
+module = "androidx.room3:room3-compiler"
+version.ref = "room3"
