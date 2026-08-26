@@ -168,6 +168,10 @@ gradle.sharedServices.registerIfAbsent('simpledslDependencyRegistry', TestDepend
 rootProject.name = 'module-dependency-consumer'
 include 'order', 'user', 'model'
 '''.stripIndent())
+
+        ['order', 'user', 'model'].each { name ->
+            Files.createDirectories(projectDir.resolve(name))
+        }
     }
 
     private void writeLibrary(String name, String namespace) {
