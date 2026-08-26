@@ -59,28 +59,33 @@ class PublishedAndroidConsumerContractTest {
 
         assertTrue(result.output.contains('BUILD SUCCESSFUL'))
 
-        Path generatedRoot = fixture.toPath().resolve('app/build/generated/ksp')
+        Path roomGeneratedRoot = fixture.toPath().resolve('app/build/generated/ksp')
         assertTrue(
-                Files.isDirectory(generatedRoot),
-                "KSP output directory was not generated: ${generatedRoot}".toString())
+                Files.isDirectory(roomGeneratedRoot),
+                "KSP output directory was not generated: ${roomGeneratedRoot}".toString())
 
-        boolean generatedDatabaseImplementation = Files.walk(generatedRoot).withCloseable { paths ->
+        boolean generatedDatabaseImplementation = Files.walk(roomGeneratedRoot).withCloseable { paths ->
             paths.anyMatch { Path path ->
                 Files.isRegularFile(path) && path.fileName.toString() == 'AppDatabase_Impl.kt'
             }
         }
         assertTrue(
                 generatedDatabaseImplementation,
-                "Room did not generate AppDatabase_Impl.kt under ${generatedRoot}".toString())
+                "Room did not generate AppDatabase_Impl.kt under ${roomGeneratedRoot}".toString())
 
-        boolean generatedHiltApplication = Files.walk(generatedRoot).withCloseable { paths ->
+        Path hiltGeneratedRoot = fixture.toPath().resolve('app/build/generated/hilt/component_sources')
+        assertTrue(
+                Files.isDirectory(hiltGeneratedRoot),
+                "Hilt component source directory was not generated: ${hiltGeneratedRoot}".toString())
+
+        boolean generatedHiltApplication = Files.walk(hiltGeneratedRoot).withCloseable { paths ->
             paths.anyMatch { Path path ->
                 Files.isRegularFile(path) && path.fileName.toString() == 'Hilt_ExampleApplication.java'
             }
         }
         assertTrue(
                 generatedHiltApplication,
-                "Hilt did not generate Hilt_ExampleApplication.java under ${generatedRoot}".toString())
+                "Hilt did not generate Hilt_ExampleApplication.java under ${hiltGeneratedRoot}".toString())
     }
 
     private static BuildResult build(File fixture, List<String> arguments) {
