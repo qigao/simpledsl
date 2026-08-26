@@ -7,4 +7,9 @@ simpledsl {
         namespace = 'example.app'
     }
     jetpackCompose()
+    ksp()
 }
+
+assert pluginManager.hasPlugin('com.google.devtools.ksp')
+assert !pluginManager.hasPlugin('org.jetbrains.kotlin.android')
+assert configurations.findByName('ksp') != null
