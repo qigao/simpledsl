@@ -32,7 +32,7 @@ class PublishedAndroidConsumerContractTest {
 
         assertTrue(first.output.contains('SimpleDSL Android variant: debug'))
         assertTrue(first.output.contains('SimpleDSL Android variant: release'))
-        assertTrue(first.output.contains('Features: compose,ksp,room'))
+        assertTrue(first.output.contains('Features: compose,hilt,ksp,room'))
         assertTrue(first.output.contains('Platforms: compose'))
         assertTrue(first.output.contains('Platform bindings: implementation:compose'))
         assertTrue(first.output.contains('Configuration cache entry stored.'))
@@ -45,13 +45,13 @@ class PublishedAndroidConsumerContractTest {
                 "Second Android consumer build did not reuse configuration cache:\n${second.output}".toString())
         assertTrue(second.output.contains('SimpleDSL Android variant: debug'))
         assertTrue(second.output.contains('SimpleDSL Android variant: release'))
-        assertTrue(second.output.contains('Features: compose,ksp,room'))
+        assertTrue(second.output.contains('Features: compose,hilt,ksp,room'))
         assertTrue(second.output.contains('Platform bindings: implementation:compose'))
     }
 
     @Test
-    void assemblesPublishedAndroidApplicationAndLibraryWithComposeAndRoomCodegen() {
-        File fixture = copyFixture('published-android-compose-room-assemble')
+    void assemblesPublishedAndroidApplicationAndLibraryWithRoomAndHiltCodegen() {
+        File fixture = copyFixture('published-android-room-hilt-assemble')
 
         BuildResult result = build(
                 fixture,
@@ -59,19 +59,33 @@ class PublishedAndroidConsumerContractTest {
 
         assertTrue(result.output.contains('BUILD SUCCESSFUL'))
 
-        Path generatedRoot = fixture.toPath().resolve('app/build/generated/ksp')
+        Path roomGeneratedRoot = fixture.toPath().resolve('app/build/generated/ksp')
         assertTrue(
-                Files.isDirectory(generatedRoot),
-                "Room KSP output directory was not generated: ${generatedRoot}".toString())
+                Files.isDirectory(roomGeneratedRoot),
+                "KSP output directory was not generated: ${roomGeneratedRoot}".toString())
 
-        boolean generatedDatabaseImplementation = Files.walk(generatedRoot).withCloseable { paths ->
+        boolean generatedDatabaseImplementation = Files.walk(roomGeneratedRoot).withCloseable { paths ->
             paths.anyMatch { Path path ->
                 Files.isRegularFile(path) && path.fileName.toString() == 'AppDatabase_Impl.kt'
             }
         }
         assertTrue(
                 generatedDatabaseImplementation,
-                "Room did not generate AppDatabase_Impl.kt under ${generatedRoot}".toString())
+                "Room did not generate AppDatabase_Impl.kt under ${roomGeneratedRoot}".toString())
+
+        Path hiltGeneratedRoot = fixture.toPath().resolve('app/build/generated/hilt/component_sources')
+        assertTrue(
+                Files.isDirectory(hiltGeneratedRoot),
+                "Hilt component source directory was not generated: ${hiltGeneratedRoot}".toString())
+
+        boolean generatedHiltApplication = Files.walk(hiltGeneratedRoot).withCloseable { paths ->
+            paths.anyMatch { Path path ->
+                Files.isRegularFile(path) && path.fileName.toString() == 'Hilt_ExampleApplication.java'
+            }
+        }
+        assertTrue(
+                generatedHiltApplication,
+                "Hilt did not generate Hilt_ExampleApplication.java under ${hiltGeneratedRoot}".toString())
     }
 
     private static BuildResult build(File fixture, List<String> arguments) {

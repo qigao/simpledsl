@@ -23,6 +23,7 @@ dependencies {
     implementation(libs.android.gradle)
     implementation(libs.compose.compiler.gradle)
     implementation(libs.ksp.gradle)
+    implementation(libs.hilt.gradle)
     testImplementation(gradleTestKit())
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

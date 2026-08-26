@@ -23,10 +23,19 @@ final class BuiltinAndroidCapabilities {
             .dependency('ksp', 'room-compiler')
             .build()
 
+    static final CapabilitySpec HILT = CapabilitySpec.builder('hilt')
+            .allow('android-application', 'android-library')
+            .require('ksp')
+            .externalPluginId('com.google.dagger.hilt.android')
+            .dependency('implementation', 'hilt-android')
+            .dependency('ksp', 'hilt-compiler')
+            .build()
+
     static void registerAll(CapabilityRegistry registry) {
         registry.register(COMPOSE)
         registry.register(KSP)
         registry.register(ROOM)
+        registry.register(HILT)
     }
 
     private BuiltinAndroidCapabilities() {}

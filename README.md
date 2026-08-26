@@ -2,7 +2,7 @@
 
 SimpleDSL is a Gradle build platform for repository dependency policy and module-oriented builds. The 0.3.0 development line separates backend-neutral infrastructure from independent Java/Spring and Android project backends.
 
-> **Development status:** Phase A (shared core + Java backend), Phase B (Android backend foundation), Phase C (Compose), Phase D (KSP foundation), and Phase E (Room) are implemented on this branch. `0.3.0` is still under development and has not been released. Hilt and other Android capabilities remain later work.
+> **Development status:** Phase A (shared core + Java backend), Phase B (Android backend foundation), Phase C (Compose), Phase D (KSP foundation), Phase E (Room), and Phase F (Hilt) are implemented on this branch. `0.3.0` is still under development and has not been released. Other Android capabilities remain later work.
 
 ## Requirements
 
@@ -13,6 +13,7 @@ SimpleDSL is a Gradle build platform for repository dependency policy and module
 - The Compose Compiler Gradle plugin is managed at 2.2.10 to match the AGP 9.0.1 built-in Kotlin line.
 - KSP is managed at 2.3.9 and uses KSP2. KSP 2.3.1 introduced AGP 9 built-in Kotlin support; the older `2.2.10-2.0.2` compatibility floor is not used by SimpleDSL.
 - The Room capability baseline uses stable Room3 3.0.1 (`androidx.room3`). Room3 requires KSP and Kotlin code generation.
+- The Hilt capability baseline uses Dagger/Hilt 2.60.1. SimpleDSL settings owns `com.google.dagger.hilt.android`, and Hilt processing uses KSP rather than KAPT.
 - The Compose library baseline uses Compose BOM 2026.06.00 / Compose 1.11.x. Compose 1.12 moves to the API 37 line and requires a newer AGP baseline than 9.0.1.
 
 ## Public plugins
@@ -62,7 +63,7 @@ dependencyResolutionManagement {
 }
 ```
 
-The settings plugin resolves the Java and Android backends to the same SimpleDSL release version. An explicitly requested conflicting backend version fails with a `SimpleDSL version conflict` diagnostic. Settings also owns external build-tool versions such as AGP, the Compose Compiler plugin, and KSP so module-local incompatible overrides fail early.
+The settings plugin resolves the Java and Android backends to the same SimpleDSL release version. An explicitly requested conflicting backend version fails with a `SimpleDSL version conflict` diagnostic. Settings also owns external build-tool versions such as AGP, the Compose Compiler plugin, KSP, and the Hilt Gradle plugin so module-local incompatible overrides fail early.
 
 ### Java/Spring backend
 
@@ -196,7 +197,7 @@ simpledsl {
 
 `ksp()` is sugar for semantic capability ID `ksp`; `capability('ksp')` is equivalent. The capability applies the settings-managed `com.google.devtools.ksp` plugin and exposes the standard KSP configurations while keeping AGP 9 built-in Kotlin enabled. Module builds do not declare a KSP plugin version or apply `org.jetbrains.kotlin.android`.
 
-The foundation deliberately does not own processors, processor arguments, or generated-source conventions. Android capabilities compose the existing `CapabilitySpec` primitives instead of introducing a second code-generation framework. Phase E Room validates that contract directly: Room requires `ksp` and binds its compiler alias to the standard `ksp` configuration without changing `CapabilitySpec`, `CapabilityEngine`, or the shared core.
+The foundation deliberately does not own processors, processor arguments, or generated-source conventions. Android capabilities compose the existing `CapabilitySpec` primitives instead of introducing a second code-generation framework. Phase E Room and Phase F Hilt both validate that contract directly: each requires `ksp` and binds its compiler alias to the standard `ksp` configuration without changing `CapabilitySpec`, `CapabilityEngine`, or the dependency bridge.
 
 KSP2 is the supported mode. KSP1 compatibility and opt-outs from AGP built-in Kotlin are not part of the Android backend contract.
 
@@ -242,6 +243,50 @@ Enabling Room therefore transitively enables the managed KSP2 plugin and standar
 Phase E intentionally does not apply the Room Gradle plugin or introduce schema-directory, migration, processor-argument, or generated-source abstractions. Those concerns have a different lifecycle from dependency/code-generation activation and can be added later if a concrete contract requires them. Room 2.x, KAPT, and Java annotation-processing compatibility are also outside this capability.
 
 The published Android consumer verifies real Room3 code generation: an application containing `@Entity`, `@Dao`, and `@Database` Kotlin sources assembles successfully and produces `AppDatabase_Impl.kt` through KSP, while a library exercises the equivalent generic `capability('room')` path.
+
+### Hilt capability
+
+Hilt uses a settings-managed Gradle plugin plus repository-policy runtime/compiler aliases. The validated Phase F baseline is Dagger/Hilt 2.60.1:
+
+```toml
+[versions]
+hilt = "2.60.1"
+
+[libraries.hilt-android]
+module = "com.google.dagger:hilt-android"
+version.ref = "hilt"
+
+[libraries.hilt-compiler]
+module = "com.google.dagger:hilt-compiler"
+version.ref = "hilt"
+```
+
+Enable Hilt after declaring an Android module:
+
+```groovy
+simpledsl {
+    androidApplication {
+        namespace = 'com.example.app'
+    }
+    hilt()
+}
+```
+
+`hilt()` is sugar for semantic capability ID `hilt`; `capability('hilt')` is equivalent. The capability is composed from existing primitives:
+
+```text
+hilt
+  requires ksp
+  plugin         -> com.google.dagger.hilt.android
+  implementation -> hilt-android
+  ksp            -> hilt-compiler
+```
+
+SimpleDSL settings owns `com.google.dagger.hilt.android` at 2.60.1, while `simpledsl-android` carries the Hilt Gradle plugin tooling needed to apply it. The runtime and compiler remain consumer dependencies resolved from repository policy. Enabling Hilt transitively enables KSP2; consumers do not need `ksp()`, `kapt`, or `org.jetbrains.kotlin.android`.
+
+Phase F does not add a generic code-generation abstraction, processor DSL, activation callback, or Hilt-specific core hook. `CapabilitySpec`, `CapabilityEngine`, and `DependencyBridge` remain unchanged. Hilt testing, Navigation Compose integration, custom components, advanced processor flags, and KAPT/Java annotation-processing compatibility remain outside the capability.
+
+The real published consumer combines Compose, Room, and Hilt in one application. It compiles an `@HiltAndroidApp` application, verifies Hilt's generated `Hilt_ExampleApplication.java` under `build/generated/hilt/component_sources`, preserves the Room `AppDatabase_Impl.kt` KSP proof, and assembles both application and library debug artifacts. The library exercises the generic `capability('hilt')` path.
 
 ### Android Components proof surface
 
@@ -403,7 +448,7 @@ simpledslCapabilities
 simpledslDoctor
 ```
 
-Android additionally exposes `simpledslAndroidVariants` as the public Android Components proof task. Compose + Room activation appears in `simpledslCapabilities` as `Features: compose,ksp,room`: `ksp` is present because Room requires it transitively, while Compose continues to report `Platform bindings: implementation:compose`.
+Android additionally exposes `simpledslAndroidVariants` as the public Android Components proof task. Compose + Room + Hilt activation appears in `simpledslCapabilities` as `Features: compose,hilt,ksp,room`: `ksp` is present because Room and Hilt require it transitively, while Compose continues to report `Platform bindings: implementation:compose`.
 
 ## Artifact and publication model
 
@@ -425,17 +470,17 @@ simpledsl-core
   └── simpledsl-android
 ```
 
-- `simpledsl-core` must not carry Java/Spring tooling, AGP, Compose tooling, or KSP tooling.
-- `simpledsl-java` depends on core, must not depend on Android, and must not carry AGP, Compose tooling, or KSP tooling.
-- `simpledsl-android` depends on core, AGP 9.0.1, the Compose Compiler Gradle plugin 2.2.10, and KSP 2.3.9; it must not depend on Java or carry Spring/GraalVM/jOOQ/jsonschema2pojo tooling.
+- `simpledsl-core` must not carry Java/Spring tooling, AGP, Compose tooling, KSP tooling, or Hilt Gradle tooling.
+- `simpledsl-java` depends on core, must not depend on Android, and must not carry AGP, Compose tooling, KSP tooling, or Hilt Gradle tooling.
+- `simpledsl-android` depends on core, AGP 9.0.1, the Compose Compiler Gradle plugin 2.2.10, KSP 2.3.9, and the Hilt Gradle plugin 2.60.1; it must not depend on Java or carry Spring/GraalVM/jOOQ/jsonschema2pojo tooling.
 
-Room runtime/compiler libraries are consumer dependencies selected through repository policy; they are not embedded as tooling dependencies in the Android plugin artifact.
+Room and Hilt runtime/compiler libraries are consumer dependencies selected through repository policy; they are not embedded as runtime/compiler dependencies in the Android plugin artifact. The Hilt **Gradle plugin** is Android backend tooling and is therefore intentionally present in `simpledsl-android`.
 
 `verifyBackendIsolation` enforces these rules against the actual POMs published to the isolated test Maven repository.
 
 ## Development verification
 
-The Phase E verification contract is:
+The Phase F verification contract is:
 
 ```bash
 ./gradlew clean \
@@ -450,7 +495,7 @@ The Phase E verification contract is:
   --stacktrace
 ```
 
-The Android published-consumer suite does not use `includeBuild` or `withPluginClasspath()`. It resolves the settings and Android plugins from the isolated Maven repository, resolves AGP, the Compose Compiler plugin, and KSP through the managed settings contract, verifies variants/capabilities/configuration-cache reuse, and assembles real application/library debug artifacts. The application combines Compose with `room()`, compiles real `@Entity` / `@Dao` / `@Database` Kotlin sources through Room3 KSP, and verifies the generated `AppDatabase_Impl.kt`; the library exercises `capability('room')`. Neither consumer applies KSP directly, so the suite also proves Room's transitive KSP activation.
+The Android published-consumer suite does not use `includeBuild` or `withPluginClasspath()`. It resolves the settings and Android plugins from the isolated Maven repository, resolves AGP, the Compose Compiler plugin, KSP, and Hilt through the managed settings/publication contract, verifies variants/capabilities/configuration-cache reuse, and assembles real application/library debug artifacts. The application combines Compose, `room()`, and `hilt()`, verifies both Room KSP output and Hilt generated component sources, while the library exercises `capability('room')` and `capability('hilt')`. Neither consumer applies KSP directly, so the suite proves transitive KSP activation for both processor-backed capabilities.
 
 `validatePlugins` runs as part of each plugin project's `check`. The release workflow performs the same isolated distribution verification before any Plugin Portal upload; it does not rely on fake credentials or a local `publishPlugins --validate-only` shortcut.
 

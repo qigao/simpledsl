@@ -8,9 +8,11 @@ simpledsl {
     }
     jetpackCompose()
     room()
+    hilt()
 }
 
 assert pluginManager.hasPlugin('com.google.devtools.ksp')
+assert pluginManager.hasPlugin('com.google.dagger.hilt.android')
 assert !pluginManager.hasPlugin('org.jetbrains.kotlin.android')
 assert configurations.findByName('ksp') != null
 assert configurations.getByName('implementation').dependencies.any {
@@ -18,4 +20,10 @@ assert configurations.getByName('implementation').dependencies.any {
 }
 assert configurations.getByName('ksp').dependencies.any {
     it.group == 'androidx.room3' && it.name == 'room3-compiler' && it.version == '3.0.1'
+}
+assert configurations.getByName('implementation').dependencies.any {
+    it.group == 'com.google.dagger' && it.name == 'hilt-android' && it.version == '2.60.1'
+}
+assert configurations.getByName('ksp').dependencies.any {
+    it.group == 'com.google.dagger' && it.name == 'hilt-compiler' && it.version == '2.60.1'
 }
