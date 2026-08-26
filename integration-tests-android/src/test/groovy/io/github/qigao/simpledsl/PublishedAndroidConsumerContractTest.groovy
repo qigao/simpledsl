@@ -32,7 +32,7 @@ class PublishedAndroidConsumerContractTest {
 
         assertTrue(first.output.contains('SimpleDSL Android variant: debug'))
         assertTrue(first.output.contains('SimpleDSL Android variant: release'))
-        assertTrue(first.output.contains('Features: compose,ksp'))
+        assertTrue(first.output.contains('Features: compose,ksp,room'))
         assertTrue(first.output.contains('Platforms: compose'))
         assertTrue(first.output.contains('Platform bindings: implementation:compose'))
         assertTrue(first.output.contains('Configuration cache entry stored.'))
@@ -45,19 +45,33 @@ class PublishedAndroidConsumerContractTest {
                 "Second Android consumer build did not reuse configuration cache:\n${second.output}".toString())
         assertTrue(second.output.contains('SimpleDSL Android variant: debug'))
         assertTrue(second.output.contains('SimpleDSL Android variant: release'))
-        assertTrue(second.output.contains('Features: compose,ksp'))
+        assertTrue(second.output.contains('Features: compose,ksp,room'))
         assertTrue(second.output.contains('Platform bindings: implementation:compose'))
     }
 
     @Test
-    void assemblesPublishedAndroidApplicationAndLibraryWithComposeAndKsp() {
-        File fixture = copyFixture('published-android-compose-ksp-assemble')
+    void assemblesPublishedAndroidApplicationAndLibraryWithComposeAndRoomCodegen() {
+        File fixture = copyFixture('published-android-compose-room-assemble')
 
         BuildResult result = build(
                 fixture,
                 consumerArguments(':app:assembleDebug', ':feature:assembleDebug'))
 
         assertTrue(result.output.contains('BUILD SUCCESSFUL'))
+
+        Path generatedRoot = fixture.toPath().resolve('app/build/generated/ksp')
+        assertTrue(
+                Files.isDirectory(generatedRoot),
+                "Room KSP output directory was not generated: ${generatedRoot}".toString())
+
+        boolean generatedDatabaseImplementation = Files.walk(generatedRoot).withCloseable { paths ->
+            paths.anyMatch { Path path ->
+                Files.isRegularFile(path) && path.fileName.toString() == 'AppDatabase_Impl.kt'
+            }
+        }
+        assertTrue(
+                generatedDatabaseImplementation,
+                "Room did not generate AppDatabase_Impl.kt under ${generatedRoot}".toString())
     }
 
     private static BuildResult build(File fixture, List<String> arguments) {

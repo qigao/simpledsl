@@ -56,6 +56,10 @@ class SimpleDslAndroidExtension {
         capability(BuiltinAndroidCapabilities.KSP.id)
     }
 
+    void room() {
+        capability(BuiltinAndroidCapabilities.ROOM.id)
+    }
+
     private void configureBackendCapability(String capabilityId) {
         if (BuiltinAndroidCapabilities.COMPOSE.id == capabilityId) {
             ComposeCapabilityConfigurer.configure(project)

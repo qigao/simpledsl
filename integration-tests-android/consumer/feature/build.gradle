@@ -7,9 +7,15 @@ simpledsl {
         namespace = 'example.feature'
     }
     jetpackCompose()
-    capability('ksp')
+    capability('room')
 }
 
 assert pluginManager.hasPlugin('com.google.devtools.ksp')
 assert !pluginManager.hasPlugin('org.jetbrains.kotlin.android')
 assert configurations.findByName('ksp') != null
+assert configurations.getByName('implementation').dependencies.any {
+    it.group == 'androidx.room3' && it.name == 'room3-runtime' && it.version == '3.0.1'
+}
+assert configurations.getByName('ksp').dependencies.any {
+    it.group == 'androidx.room3' && it.name == 'room3-compiler' && it.version == '3.0.1'
+}

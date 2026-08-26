@@ -2,7 +2,7 @@
 
 ## Unreleased - 0.3.0 development
 
-SimpleDSL 0.3.0 is evolving the project side into independent build backends. Phase A established the shared core and Java backend; Phase B added the Android backend foundation; Phase C added Jetpack Compose; Phase D adds the KSP foundation for later Android code-generation capabilities. The release is still in development and has not been tagged.
+SimpleDSL 0.3.0 is evolving the project side into independent build backends. Phase A established the shared core and Java backend; Phase B added the Android backend foundation; Phase C added Jetpack Compose; Phase D added the KSP foundation; Phase E adds Room on top of that foundation without expanding the generic capability model. The release is still in development and has not been tagged.
 
 ### Phase A: shared core and Java backend
 
@@ -56,7 +56,22 @@ SimpleDSL 0.3.0 is evolving the project side into independent build backends. Ph
 - Kept KSP Gradle tooling Android-only and extended published backend isolation to forbid it in core/Java and require it in the Android artifact.
 - Added real published consumers: the application activates `ksp()` while the library exercises `capability('ksp')`; both prove the KSP plugin and standard `ksp` configuration are available alongside Compose and AGP built-in Kotlin.
 - Published-consumer CI continues to compile real Kotlin/Compose sources, assemble application/library debug artifacts, and reuse Gradle configuration cache with KSP active.
-- Room and Hilt remain later capabilities. They can build on this foundation by requiring `ksp` and binding their processors through the existing dependency configuration mechanism instead of creating a second code-generation subsystem.
+- Established the composition point used by later code-generation capabilities: `requires('ksp')` plus a dependency bound to the `ksp` configuration.
+
+### Phase E: Room capability
+
+- Added semantic Android capability `room`, valid for `android-application` and `android-library` modules.
+- Added public DSL sugar `room()` and equivalent generic entry `capability('room')`.
+- Pinned the repository-policy consumer baseline to stable Room3 3.0.1 using `androidx.room3:room3-runtime` and `androidx.room3:room3-compiler`.
+- Defined Room entirely with existing capability primitives: `require('ksp')`, `dependency('implementation', 'room-runtime')`, and `dependency('ksp', 'room-compiler')`.
+- Enabling Room transitively activates KSP2 2.3.9 and the standard `ksp` configuration; consumers do not call `ksp()` separately.
+- Kept `simpledsl-core`, `CapabilitySpec`, `CapabilityEngine`, and the dependency bridge unchanged. Phase E therefore validates that the KSP foundation is sufficient for a real processor-backed capability without a generic code-generation subsystem.
+- Kept AGP 9.0.1 built-in Kotlin and continued to forbid `org.jetbrains.kotlin.android`.
+- Deliberately left the Room Gradle plugin, schema-directory DSL, schema/migration lifecycle, processor arguments, Room 2.x, KAPT, and Java annotation-processing compatibility out of scope.
+- Extended the real published app/library consumers so the application uses `room()` and the library uses `capability('room')`; both prove Room's transitive KSP activation and Room runtime/compiler dependency bindings.
+- Added real Room3 Kotlin source (`@Entity`, `@Dao`, and `@Database`) to the published application and verify KSP generates `AppDatabase_Impl.kt` before the debug application/library artifacts are assembled.
+- Preserved configuration-cache reuse, Compose coexistence, backend isolation, and the existing publication model; Room runtime/compiler remain consumer dependencies rather than Android plugin tooling dependencies.
+- TDD/CI chronology: CI #180 is the test-only RED contract, CI #181 is GREEN for the minimal production capability, and CI #182 is GREEN for real published Room3 code generation.
 
 ### 0.2.x to 0.3.0 Java migration
 
@@ -87,6 +102,7 @@ target-sdk = 36
 
 [versions]
 compose-bom = "2026.06.00"
+room3 = "3.0.1"
 
 [libraries.compose]
 module = "androidx.compose:compose-bom"
@@ -99,9 +115,17 @@ platform = "compose"
 [libraries.compose-ui]
 module = "androidx.compose.ui:ui"
 platform = "compose"
+
+[libraries.room-runtime]
+module = "androidx.room3:room3-runtime"
+version.ref = "room3"
+
+[libraries.room-compiler]
+module = "androidx.room3:room3-compiler"
+version.ref = "room3"
 ```
 
-Application with Compose and KSP:
+Application with Compose and Room:
 
 ```groovy
 plugins {
@@ -113,7 +137,7 @@ simpledsl {
         namespace = 'com.example.app'
     }
     jetpackCompose()
-    ksp()
+    room()
 }
 ```
 
@@ -128,13 +152,13 @@ simpledsl {
     androidLibrary {
         namespace = 'com.example.feature'
     }
-    capability('ksp')
+    capability('room')
 }
 ```
 
 ### Later Android phases
 
-Room, Hilt, KMP, dynamic features, benchmark module types, custom artifact transforms, and per-module SDK overrides remain later work. Legacy variant APIs, task-name guessing, KSP1, and built-in-Kotlin opt-outs remain out of scope by design.
+Hilt, KMP, dynamic features, benchmark module types, custom artifact transforms, and per-module SDK overrides remain later work. The Room Gradle plugin/schema lifecycle, legacy variant APIs, task-name guessing, KSP1, KAPT, Room 2.x compatibility, and built-in-Kotlin opt-outs remain out of scope by design.
 
 ---
 

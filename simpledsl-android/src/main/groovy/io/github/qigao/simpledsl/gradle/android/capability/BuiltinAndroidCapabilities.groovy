@@ -16,9 +16,17 @@ final class BuiltinAndroidCapabilities {
             .externalPluginId('com.google.devtools.ksp')
             .build()
 
+    static final CapabilitySpec ROOM = CapabilitySpec.builder('room')
+            .allow('android-application', 'android-library')
+            .require('ksp')
+            .dependency('implementation', 'room-runtime')
+            .dependency('ksp', 'room-compiler')
+            .build()
+
     static void registerAll(CapabilityRegistry registry) {
         registry.register(COMPOSE)
         registry.register(KSP)
+        registry.register(ROOM)
     }
 
     private BuiltinAndroidCapabilities() {}
