@@ -12,6 +12,14 @@ simpledsl {
     hilt()
 }
 
+// App Bundle publication metadata belongs to the base application. Dynamic
+// features inherit it and must not declare their own version code.
+android {
+    defaultConfig {
+        versionCode = 1
+    }
+}
+
 assert pluginManager.hasPlugin('com.google.devtools.ksp')
 assert pluginManager.hasPlugin('com.google.dagger.hilt.android')
 assert !pluginManager.hasPlugin('org.jetbrains.kotlin.android')
