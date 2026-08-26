@@ -55,7 +55,7 @@ References:
 ## Goals
 
 1. Add Dynamic Feature as a first-class Android **module type**.
-2. Keep `simpledsl-core` unchanged and backend-neutral.
+2. Keep `simpledsl-core` backend-neutral; only extend distribution ownership for the third AGP plugin ID, with no generic module/capability/dependency-engine changes.
 3. Reuse the existing Android repository policy for Java level, `compileSdk`, and `minSdk`.
 4. Apply `com.android.dynamic-feature` under the same settings-owned AGP 9.0.1 compatibility contract as `com.android.application` and `com.android.library`.
 5. Use only AGP public DSL and Android Components APIs.
