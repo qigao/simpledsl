@@ -6,4 +6,5 @@ simpledsl {
     androidLibrary {
         namespace = 'example.feature'
     }
+    jetpackCompose()
 }
