@@ -16,6 +16,44 @@ final class DependencyBridge {
         project.dependencies.add(configuration, library.notation())
     }
 
+    static void addProject(Project project, String configuration, String projectPath) {
+        String configurationName = configuration == null ? '' : configuration.trim()
+        String dependencyPath = projectPath == null ? '' : projectPath.trim()
+
+        if (dependencyPath.isEmpty() || !dependencyPath.startsWith(':')) {
+            failProjectDependency(
+                    project,
+                    configurationName,
+                    dependencyPath,
+                    "dependency must be an absolute Gradle project path beginning with ':'")
+        }
+        if (dependencyPath == project.path) {
+            failProjectDependency(
+                    project,
+                    configurationName,
+                    dependencyPath,
+                    'module cannot depend on itself')
+        }
+        if (project.rootProject.findProject(dependencyPath) == null) {
+            failProjectDependency(
+                    project,
+                    configurationName,
+                    dependencyPath,
+                    'target module was not discovered')
+        }
+        if (configurationName.isEmpty() || project.configurations.findByName(configurationName) == null) {
+            failProjectDependency(
+                    project,
+                    configurationName,
+                    dependencyPath,
+                    'configuration does not exist')
+        }
+
+        project.dependencies.add(
+                configurationName,
+                project.dependencies.project([path: dependencyPath]))
+    }
+
     static void activatePlatform(
             Project project,
             SimpleDslModuleModel model,
@@ -64,5 +102,18 @@ final class DependencyBridge {
                     "Dependency alias: ${alias}\n" +
                     'Problem: target configuration does not exist')
         }
+    }
+
+    private static void failProjectDependency(
+            Project project,
+            String configuration,
+            String dependency,
+            String problem) {
+        throw new SimpleDslConfigurationException(
+                'SimpleDSL module dependency error\n' +
+                "Project: ${project.path}\n" +
+                "Configuration: ${configuration}\n" +
+                "Dependency: ${dependency}\n" +
+                "Problem: ${problem}")
     }
 }

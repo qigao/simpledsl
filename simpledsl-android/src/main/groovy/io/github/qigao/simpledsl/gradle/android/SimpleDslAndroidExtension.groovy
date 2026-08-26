@@ -6,6 +6,7 @@ import io.github.qigao.simpledsl.gradle.android.module.SimpleDslAndroidApplicati
 import io.github.qigao.simpledsl.gradle.android.module.SimpleDslAndroidDynamicFeaturePlugin
 import io.github.qigao.simpledsl.gradle.android.module.SimpleDslAndroidLibraryPlugin
 import io.github.qigao.simpledsl.gradle.capability.CapabilityEngine
+import io.github.qigao.simpledsl.gradle.dependency.DependencyBridge
 import io.github.qigao.simpledsl.gradle.model.SimpleDslModuleModel
 import org.gradle.api.Action
 import org.gradle.api.GradleException
@@ -57,41 +58,11 @@ class SimpleDslAndroidExtension {
     }
 
     void dependsOn(String projectPath) {
-        dependsOn('implementation', projectPath)
+        DependencyBridge.addProject(project, 'implementation', projectPath)
     }
 
     void dependsOn(String configuration, String projectPath) {
-        String configurationName = configuration == null ? '' : configuration.trim()
-        String dependencyPath = projectPath == null ? '' : projectPath.trim()
-
-        if (dependencyPath.isEmpty() || !dependencyPath.startsWith(':')) {
-            failModuleDependency(
-                    configurationName,
-                    dependencyPath,
-                    "dependency must be an absolute Gradle project path beginning with ':'")
-        }
-        if (dependencyPath == project.path) {
-            failModuleDependency(
-                    configurationName,
-                    dependencyPath,
-                    'module cannot depend on itself')
-        }
-        if (project.rootProject.findProject(dependencyPath) == null) {
-            failModuleDependency(
-                    configurationName,
-                    dependencyPath,
-                    'target module was not discovered')
-        }
-        if (configurationName.isEmpty() || project.configurations.findByName(configurationName) == null) {
-            failModuleDependency(
-                    configurationName,
-                    dependencyPath,
-                    'configuration does not exist')
-        }
-
-        project.dependencies.add(
-                configurationName,
-                project.dependencies.project([path: dependencyPath]))
+        DependencyBridge.addProject(project, configuration, projectPath)
     }
 
     void capability(String capabilityId) {
@@ -153,15 +124,6 @@ class SimpleDslAndroidExtension {
                     "Project: ${project.path}\n" +
                     'Problem: exactly one Android module type may be declared')
         }
-    }
-
-    private void failModuleDependency(String configuration, String dependency, String problem) {
-        throw new GradleException(
-                'SimpleDSL module dependency error\n' +
-                "Project: ${project.path}\n" +
-                "Configuration: ${configuration}\n" +
-                "Dependency: ${dependency}\n" +
-                "Problem: ${problem}")
     }
 
     private static void configure(Object target, Closure closure) {
