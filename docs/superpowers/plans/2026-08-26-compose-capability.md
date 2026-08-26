@@ -1,116 +1,81 @@
 # Compose Android Capability Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Add `simpledsl { ... compose() }` as the first Android backend-specific capability while preserving repository policy → snapshot → backend.
+**Goal:** Add Jetpack Compose as the first Android backend-specific capability while preserving repository policy → snapshot → backend.
 
-**Architecture:** Keep `simpledsl-core` unchanged. Register a Compose `CapabilitySpec` inside `simpledsl-android`; use the existing core engine for module validation, compiler-plugin application, and dependency-alias binding; keep `buildFeatures.compose = true` in an Android-only helper.
+**Final public DSL:** `jetpackCompose()`; semantic capability ID `compose`; generic equivalent `capability('compose')`.
+
+**Architecture:** `simpledsl-core` remains unchanged. `simpledsl-android` registers the Compose `CapabilitySpec`; the existing core engine performs module validation, compiler-plugin application, dependency-alias binding, and model recording. The one AGP-specific mutation (`buildFeatures.compose = true`) remains in an Android-only helper and runs after the core engine succeeds.
 
 **Tech Stack:** Gradle 9.1.0, AGP 9.0.1, built-in Kotlin/KGP 2.2.10, Compose Compiler plugin 2.2.10, compileSdk 36, Java 21, Compose BOM 2026.06.00 / Compose 1.11.x, Gradle TestKit, JUnit 5.
 
 **Spec:** `docs/superpowers/specs/2026-08-25-java-android-backend-split-design.md`
 
-## Global Constraints
+## Outcome adjustments discovered during TDD
 
-- `simpledsl-core` stays backend-neutral: no AGP/Compose dependency or callback hook.
+The originally proposed bare `compose()` sugar is not a viable Gradle Groovy DSL name. Gradle configures extension closures with a Groovy `Closure`, and `Closure` already owns `compose(Closure)`. The intended zero-argument DSL call therefore resolves into Groovy closure composition before it reaches `SimpleDslAndroidExtension`. This was captured by CI #164/#166.
+
+The collision-safe public sugar is `jetpackCompose()`. The semantic capability remains `compose`, so `capability('compose')` is an equivalent stable generic entry point. CI #167 captured the missing renamed sugar, and CI #168 captured that the generic entry initially activated plugin/dependencies/model but still needed the Android `buildFeatures.compose` mutation. The final Android extension routes both entries through one path.
+
+The compatibility note was also corrected during execution: the repository remains on AGP 9.0.1 / compileSdk 36 with Compose BOM 2026.06.00. Compose 1.12 moves to API 37 and its stable line requires AGP 9.1.2 or newer, so that upgrade belongs to a future baseline phase rather than Phase C.
+
+## Global constraints
+
+- `simpledsl-core` stays backend-neutral: no AGP/Compose dependency and no generic capability activation callback.
 - Keep AGP 9.0.1 / Gradle 9.1.0 / compileSdk 36 / minSdk 24 / targetSdk 36 / Java 21.
 - Use AGP 9 built-in Kotlin; never apply `org.jetbrains.kotlin.android`.
 - Pin `org.jetbrains.kotlin.plugin.compose` to 2.2.10.
-- Use Compose BOM 2026.06.00; do not cross into Compose 1.12 / API 37 / AGP 9.2 in Phase C.
-- Capability implementation binds manifest aliases only; Maven library coordinates live in repository manifest data.
+- Use Compose BOM 2026.06.00 and stay on the pre-1.12 library line.
+- Capability implementation binds manifest aliases only; Compose runtime/UI coordinates and BOM version live in repository manifest data.
 - Room, Hilt, KSP, KMP, dynamic features, benchmark modules, custom artifact transforms, and per-module SDK overrides remain out of scope.
 
 ---
 
-### Task 1: Define RED Compose DSL contract
+### Task 1: Define and refine the RED Compose DSL contract
 
-**Files:**
-- Modify: `simpledsl-android/src/test/groovy/io/github/qigao/simpledsl/gradle/android/AndroidModuleConfigurationTest.groovy`
-
-**Interfaces:**
-- Consumes: existing Android application/library DSL and snapshot schema v2.
-- Produces: failing `compose()` contract tests.
-
-- [ ] Add fake snapshot platform `compose -> androidx.compose:compose-bom:2026.06.00` and libraries `compose-runtime` / `compose-ui` with `platform: compose`.
-- [ ] Add application test using `androidApplication { namespace = 'example.compose.app' }` followed by `compose()`.
-- [ ] Assert `org.jetbrains.kotlin.plugin.compose` is applied, `android.buildFeatures.compose` is true inside `onVariants`, capability `compose` is active, and `implementation:compose` platform binding is recorded.
-- [ ] Add equivalent Android library test.
-- [ ] Add `compose()`-without-module test and expect existing capability module-type diagnostics.
-- [ ] Push test-only commit and record expected RED (`compose()` missing / capability unregistered).
-- [ ] Commit as `test: define Android Compose capability contract`.
+- [x] Added fake snapshot Compose BOM/runtime/UI aliases.
+- [x] Added Android application and library Compose contracts.
+- [x] Added no-module capability diagnostic contract.
+- [x] Captured original bare-`compose()` RED in CI #164.
+- [x] Diagnosed the Groovy `Closure.compose(Closure)` collision in CI #166.
+- [x] Renamed the public sugar to `jetpackCompose()` and captured the collision-safe missing-method RED in CI #167.
+- [x] Added generic `capability('compose')` parity contract and captured missing Android mutation RED in CI #168.
 
 ### Task 2: Pin Android Compose compiler tooling
 
-**Files:**
-- Modify: `gradle/libs.versions.toml`
-- Modify: `simpledsl-android/build.gradle.kts`
-- Modify: `simpledsl-core/build.gradle.kts`
-- Modify: `simpledsl-core/src/main/groovy/io/github/qigao/simpledsl/gradle/distribution/SimpleDslDistribution.groovy`
-- Modify: `scripts/verify-backend-isolation.sh`
-
-**Interfaces:**
-- Consumes: settings owned-plugin resolution and Android backend runtime classpath.
-- Produces: compiler plugin 2.2.10 available for programmatic application.
-
-- [ ] Add version `kotlin = "2.2.10"` and library alias for `org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin`.
-- [ ] Add `implementation(libs.compose.compiler.gradle)` to `simpledsl-android` only.
-- [ ] Export `kotlinVersion=2.2.10` through generated distribution metadata.
-- [ ] Add `org.jetbrains.kotlin.plugin.compose` to owned plugin module/version maps so existing settings conflict handling pins it.
-- [ ] Extend backend isolation: Compose compiler tooling is forbidden in core/Java and allowed in Android.
-- [ ] Run plugin/distribution/isolation tests and commit as `build: pin Android Compose compiler plugin`.
+- [x] Added Kotlin/Compose tooling version 2.2.10 to the build catalog.
+- [x] Put the Compose Compiler Gradle plugin on `simpledsl-android` implementation classpath only.
+- [x] Exported `kotlinVersion=2.2.10` through distribution metadata.
+- [x] Added `org.jetbrains.kotlin.plugin.compose` to settings-owned plugin module/version maps.
+- [x] Added explicit settings conflict test for a consumer-requested incompatible Compose Compiler version.
+- [x] Extended backend isolation so Compose compiler tooling is absent from core/Java and required by Android.
 
 ### Task 3: Implement the minimal Android capability
 
-**Files:**
-- Create: `simpledsl-android/src/main/groovy/io/github/qigao/simpledsl/gradle/android/capability/BuiltinAndroidCapabilities.groovy`
-- Create: `simpledsl-android/src/main/groovy/io/github/qigao/simpledsl/gradle/android/capability/ComposeCapabilityConfigurer.groovy`
-- Modify: `simpledsl-android/src/main/groovy/io/github/qigao/simpledsl/gradle/android/SimpleDslAndroidPlugin.groovy`
-- Modify: `simpledsl-android/src/main/groovy/io/github/qigao/simpledsl/gradle/android/SimpleDslAndroidExtension.groovy`
-
-**Interfaces:**
-- Consumes: `CapabilityRegistry`, `CapabilityEngine`, public AGP Application/Library DSL.
-- Produces: capability ID `compose` and public `void compose()`.
-
-- [ ] Define `COMPOSE = CapabilitySpec.builder('compose').allow('android-application','android-library').externalPluginId('org.jetbrains.kotlin.plugin.compose').dependency('implementation','compose-runtime').dependency('implementation','compose-ui').build()`.
-- [ ] `BuiltinAndroidCapabilities.registerAll(registry)` registers only Android built-ins.
-- [ ] `ComposeCapabilityConfigurer.configure(Project)` finds `ApplicationExtension` or `LibraryExtension` and sets `buildFeatures.compose = true`; otherwise emits an Android Compose configuration error.
-- [ ] `SimpleDslAndroidPlugin` registers Android built-ins after core/model initialization.
-- [ ] `SimpleDslAndroidExtension.capability(String)` delegates to `CapabilityEngine.enable`; `compose()` enables `COMPOSE` then calls the Android configurer.
-- [ ] Run Task 1 tests to GREEN; do not add a generic core hook.
-- [ ] Commit as `feat: add Android Compose capability`.
+- [x] Added `BuiltinAndroidCapabilities.COMPOSE` for `android-application` and `android-library`.
+- [x] Capability binds `compose-runtime` and `compose-ui` and applies `org.jetbrains.kotlin.plugin.compose` through the existing core engine.
+- [x] Added Android-only `ComposeCapabilityConfigurer` using public `ApplicationExtension` / `LibraryExtension` and `buildFeatures.compose = true`.
+- [x] Registered Android built-in capabilities in `SimpleDslAndroidPlugin`.
+- [x] Added `jetpackCompose()` sugar and generic `capability('compose')` with one shared Android backend-mutation path.
+- [x] Kept the core capability engine unchanged; no callback/hook was added.
+- [x] CI #169 completed successfully on production head `6f6ec7776a8f6c50c677333e08d5c245fa260e1a`.
 
 ### Task 4: Prove real published Compose consumers
 
-**Files:**
-- Modify: `integration-tests-android/consumer/dependencies.toml`
-- Modify: `integration-tests-android/consumer/app/build.gradle`
-- Modify: `integration-tests-android/consumer/feature/build.gradle`
-- Create: `integration-tests-android/consumer/app/src/main/kotlin/example/app/AppContent.kt`
-- Create: `integration-tests-android/consumer/feature/src/main/kotlin/example/feature/FeatureContent.kt`
-- Modify: `integration-tests-android/src/test/groovy/io/github/qigao/simpledsl/PublishedAndroidConsumerContractTest.groovy`
-
-**Interfaces:**
-- Consumes: published settings/Android markers and root dependency manifest.
-- Produces: real external consumer proof for built-in Kotlin + Compose compiler + BOM-managed runtime/UI.
-
-- [ ] In the manifest declare version `compose-bom = "2026.06.00"`, BOM alias `compose`, and versionless `compose-runtime` / `compose-ui` pointing at platform `compose`.
-- [ ] Enable `compose()` in both app and feature module; module scripts contain no direct Compose versions and no Kotlin Android plugin.
-- [ ] Add real Kotlin `@Composable` functions importing `androidx.compose.runtime.Composable` and `androidx.compose.ui.Modifier` in both modules.
-- [ ] Keep real `assembleDebug` for app/library and configuration-cache reuse; assert `simpledslCapabilities` reports `compose` and `implementation:compose` where useful.
-- [ ] Run published Android consumer twice and commit as `test: prove published Compose consumers`.
+- [x] Declared Compose BOM 2026.06.00 plus versionless `compose-runtime` / `compose-ui` aliases in the real Android consumer manifest.
+- [x] Enabled `jetpackCompose()` in both published application and library fixtures without applying `org.jetbrains.kotlin.android` or declaring module-local Compose versions.
+- [x] Added real Kotlin `@Composable` sources to both consumer modules.
+- [x] Extended `simpledslCapabilities` proof to require `Features: compose`, `Platforms: compose`, and `Platform bindings: implementation:compose`.
+- [x] Kept configuration-cache store/reuse verification and real app/library `assembleDebug`.
+- [x] CI #170 completed successfully on exact head `bfd89c43118be5d9052ca4a42d2845a84375f704`, including the real published Compose consumer gate.
 
 ### Task 5: Exact-head closeout
 
-**Files:**
-- Modify if public docs need it: `README.md`, `CHANGELOG.md`
-- Update PR description after evidence exists.
+- [x] Update README/CHANGELOG to document `jetpackCompose()`, manifest-managed Compose libraries, compiler ownership, and the Groovy name-collision rationale.
+- [x] Correct the Compose 1.12 compatibility note from the earlier alpha-era AGP 9.2 assumption to the current stable API 37 / AGP 9.1.2+ requirement.
+- [ ] Run the full repository CI on the documentation-closeout head and use that immutable head/run as the final merge gate.
+- [ ] Verify PR #15 mergeability, reviews, and unresolved review threads on that same head.
+- [ ] Update PR #15 body with the complete RED/GREEN evidence and final exact-head CI result.
 
-**Interfaces:**
-- Consumes: Tasks 1–4.
-- Produces: Phase C PR closing #14.
-
-- [ ] Document only the stable `androidApplication/androidLibrary + compose()` surface and repository-managed Compose aliases.
-- [ ] Run full CI: SDK baseline, core/Java/Android tests, both published consumers, isolation, wrapper metadata, configuration-cache reuse.
-- [ ] Verify exact PR head, reviews, and unresolved threads.
-- [ ] Update PR body with actual RED/GREEN workflow numbers and final head, keeping Room/Hilt/KSP explicitly later.
-- [ ] Merge only on exact-head success using expected head SHA; `Closes #14` closes the Phase C issue.
+The final CI run number is intentionally recorded in PR #15 rather than by another follow-up commit to this plan, so recording the evidence does not create a new unverified head.

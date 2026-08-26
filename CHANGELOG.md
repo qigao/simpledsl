@@ -2,7 +2,7 @@
 
 ## Unreleased - 0.3.0 development
 
-SimpleDSL 0.3.0 is evolving the project side into independent build backends. Phase A established the shared core and Java backend; Phase B adds the Android backend foundation. The release is still in development and has not been tagged.
+SimpleDSL 0.3.0 is evolving the project side into independent build backends. Phase A established the shared core and Java backend; Phase B added the Android backend foundation; Phase C adds the first Android backend-specific capability with Jetpack Compose. The release is still in development and has not been tagged.
 
 ### Phase A: shared core and Java backend
 
@@ -31,6 +31,20 @@ SimpleDSL 0.3.0 is evolving the project side into independent build backends. Ph
 - Strengthened `verifyBackendIsolation`: core carries neither backend tooling; Java depends on core but not Android/AGP; Android depends on core + AGP but not Java/Spring tooling.
 - Extended CI and release verification so all three plugin projects, both real published consumers, isolation gates, Android SDK baseline, and wrapper metadata are checked before publication.
 
+### Phase C: Jetpack Compose capability
+
+- Added semantic Android capability `compose`, valid for `android-application` and `android-library` modules.
+- Added public DSL sugar `jetpackCompose()` and equivalent generic entry `capability('compose')`.
+- Deliberately avoided a bare `compose()` Groovy DSL method because Gradle configuration closures inherit Groovy's existing `Closure.compose(Closure)`, which collides with the intended zero-argument method.
+- Added managed settings ownership for `org.jetbrains.kotlin.plugin.compose` at 2.2.10, aligned with the AGP 9.0.1 built-in Kotlin line.
+- Enabled Compose through AGP public DSL `buildFeatures.compose = true`; no legacy Android DSL or task-name interception was introduced.
+- Kept Compose library versions in the repository dependency manifest. The Phase C consumer baseline uses Compose BOM 2026.06.00, with versionless `compose-runtime` and `compose-ui` aliases referencing platform `compose`.
+- Reused the existing dependency bridge so enabling Compose activates the BOM and records `implementation:compose`; capability code contains no Compose runtime/UI Maven versions.
+- Kept `simpledsl-core` unchanged and backend-neutral. Android-specific capability registration and AGP mutation live in `simpledsl-android`; no generic core activation callback was added.
+- Extended backend isolation so Compose compiler tooling is Android-only and absent from core/Java publications.
+- Added real published app/library Compose consumers using AGP 9 built-in Kotlin. CI compiles real `@Composable` Kotlin sources, assembles both debug artifacts, verifies `Features: compose` / `implementation:compose`, and proves configuration-cache reuse.
+- Kept the repository baseline at AGP 9.0.1 / compileSdk 36. Compose 1.12's API 37 line requires a newer AGP baseline and is intentionally outside Phase C.
+
 ### 0.2.x to 0.3.0 Java migration
 
 Project builds change only the SimpleDSL project entry plugin:
@@ -57,9 +71,24 @@ java = 21
 compile-sdk = 36
 min-sdk = 24
 target-sdk = 36
+
+[versions]
+compose-bom = "2026.06.00"
+
+[libraries.compose]
+module = "androidx.compose:compose-bom"
+version.ref = "compose-bom"
+
+[libraries.compose-runtime]
+module = "androidx.compose.runtime:runtime"
+platform = "compose"
+
+[libraries.compose-ui]
+module = "androidx.compose.ui:ui"
+platform = "compose"
 ```
 
-Application:
+Application with Compose:
 
 ```groovy
 plugins {
@@ -70,6 +99,7 @@ simpledsl {
     androidApplication {
         namespace = 'com.example.app'
     }
+    jetpackCompose()
 }
 ```
 
@@ -87,9 +117,9 @@ simpledsl {
 }
 ```
 
-### Not in Phase B
+### Later Android phases
 
-Compose remains Phase C and is intentionally not part of the Android foundation. Room, Hilt, KSP, KMP, dynamic features, benchmark module types, legacy variant APIs, task-name guessing, and per-module SDK overrides are also out of Phase B scope.
+Room, Hilt, KSP, KMP, dynamic features, benchmark module types, custom artifact transforms, and per-module SDK overrides remain later work. Legacy variant APIs and task-name guessing remain out of scope by design.
 
 ---
 

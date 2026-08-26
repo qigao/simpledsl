@@ -2,7 +2,7 @@
 
 SimpleDSL is a Gradle build platform for repository dependency policy and module-oriented builds. The 0.3.0 development line separates backend-neutral infrastructure from independent Java/Spring and Android project backends.
 
-> **Development status:** Phase A (shared core + Java backend) and Phase B (Android backend foundation) are implemented on this branch. `0.3.0` is still under development and has not been released. Compose remains Phase C.
+> **Development status:** Phase A (shared core + Java backend), Phase B (Android backend foundation), and the Phase C Compose capability are implemented on this branch. `0.3.0` is still under development and has not been released. Room, Hilt, KSP, and other Android capabilities remain later work.
 
 ## Requirements
 
@@ -10,6 +10,8 @@ SimpleDSL is a Gradle build platform for repository dependency policy and module
 - SimpleDSL plugin artifacts run on Java 21 or newer.
 - The Android backend baseline is AGP 9.0.1 with compileSdk 36.
 - Android uses AGP 9 built-in Kotlin support; SimpleDSL does not apply `org.jetbrains.kotlin.android`.
+- The Compose Compiler Gradle plugin is managed at 2.2.10 to match the AGP 9.0.1 built-in Kotlin line.
+- The Phase C Compose library baseline uses Compose BOM 2026.06.00 / Compose 1.11.x. Compose 1.12 moves to the API 37 line and requires a newer AGP baseline than 9.0.1.
 
 ## Public plugins
 
@@ -139,7 +141,43 @@ simpledsl {
 
 The backend applies `com.android.application` or `com.android.library` and configures only AGP 9 public DSL/API surfaces (`ApplicationExtension`, `LibraryExtension`, and Android Components APIs). It does not use legacy `BaseExtension`, `AppExtension`, `applicationVariants`, or task-name guessing.
 
-The Android Java policy controls `compileOptions.sourceCompatibility` and `targetCompatibility`. AGP 9 built-in Kotlin inherits the compatible JVM target; SimpleDSL does not add a second Kotlin plugin/version policy.
+The Android Java policy controls `compileOptions.sourceCompatibility` and `targetCompatibility`. AGP 9 built-in Kotlin inherits the compatible JVM target; SimpleDSL does not apply a second Kotlin Android plugin.
+
+### Compose capability
+
+Compose libraries remain repository policy. Declare the BOM and the aliases consumed by the Android capability in the root dependency manifest:
+
+```toml
+[versions]
+compose-bom = "2026.06.00"
+
+[libraries.compose]
+module = "androidx.compose:compose-bom"
+version.ref = "compose-bom"
+
+[libraries.compose-runtime]
+module = "androidx.compose.runtime:runtime"
+platform = "compose"
+
+[libraries.compose-ui]
+module = "androidx.compose.ui:ui"
+platform = "compose"
+```
+
+Enable Compose after declaring the Android module type:
+
+```groovy
+simpledsl {
+    androidApplication {
+        namespace = 'com.example.app'
+    }
+    jetpackCompose()
+}
+```
+
+`jetpackCompose()` is the Android DSL sugar for the semantic capability ID `compose`; `capability('compose')` is equivalent. The public sugar is intentionally not named bare `compose()` because a Gradle Groovy configuration closure already inherits Groovy's `Closure.compose(Closure)` method, which collides with a zero-argument DSL method.
+
+The capability applies the managed `org.jetbrains.kotlin.plugin.compose` plugin, enables `buildFeatures.compose` through AGP public DSL, and binds `compose-runtime` / `compose-ui` through the existing dependency bridge. Because those aliases reference platform `compose`, the BOM is activated automatically and recorded as `implementation:compose`. Module build files do not apply `org.jetbrains.kotlin.android` or declare Compose versions directly.
 
 ### Android Components proof surface
 
@@ -156,8 +194,6 @@ For example:
 ```
 
 The task is populated through `beforeVariants`/`onVariants` on the public Android Components API and stores only serializable variant-name inputs, so it is compatible with Gradle configuration cache.
-
-Compose is intentionally not part of Phase B. It will be the first Android capability in Phase C.
 
 ## Dependency manifest
 
@@ -303,7 +339,7 @@ simpledslCapabilities
 simpledslDoctor
 ```
 
-Android additionally exposes `simpledslAndroidVariants` as the public Android Components proof task.
+Android additionally exposes `simpledslAndroidVariants` as the public Android Components proof task. Compose activation appears in `simpledslCapabilities` as `Features: compose` with `Platform bindings: implementation:compose`.
 
 ## Artifact and publication model
 
@@ -325,15 +361,15 @@ simpledsl-core
   └── simpledsl-android
 ```
 
-- `simpledsl-core` must not carry Java/Spring tooling or AGP.
-- `simpledsl-java` depends on core, must not depend on Android, and must not carry AGP.
-- `simpledsl-android` depends on core and AGP 9.0.1, must not depend on Java, and must not carry Spring/GraalVM/jOOQ/jsonschema2pojo tooling.
+- `simpledsl-core` must not carry Java/Spring tooling, AGP, or Compose tooling.
+- `simpledsl-java` depends on core, must not depend on Android, and must not carry AGP or Compose tooling.
+- `simpledsl-android` depends on core, AGP 9.0.1, and the Compose Compiler Gradle plugin 2.2.10; it must not depend on Java or carry Spring/GraalVM/jOOQ/jsonschema2pojo tooling.
 
 `verifyBackendIsolation` enforces these rules against the actual POMs published to the isolated test Maven repository.
 
 ## Development verification
 
-The Phase B verification contract is:
+The Phase C verification contract is:
 
 ```bash
 ./gradlew clean \
@@ -348,7 +384,7 @@ The Phase B verification contract is:
   --stacktrace
 ```
 
-The Android published-consumer suite does not use `includeBuild` or `withPluginClasspath()`. It resolves the settings and Android plugins from the isolated Maven repository, resolves AGP through the managed settings contract, verifies variants/configuration-cache reuse, and assembles real application/library debug artifacts.
+The Android published-consumer suite does not use `includeBuild` or `withPluginClasspath()`. It resolves the settings and Android plugins from the isolated Maven repository, resolves AGP and the Compose Compiler plugin through the managed settings contract, verifies variants/capabilities/configuration-cache reuse, and assembles real application/library debug artifacts containing `@Composable` Kotlin sources.
 
 `validatePlugins` runs as part of each plugin project's `check`. The release workflow performs the same isolated distribution verification before any Plugin Portal upload; it does not rely on fake credentials or a local `publishPlugins --validate-only` shortcut.
 
