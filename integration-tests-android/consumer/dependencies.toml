@@ -7,6 +7,7 @@ target-sdk = 36
 [versions]
 compose-bom = "2026.06.00"
 room3 = "3.0.1"
+hilt = "2.60.1"
 
 [libraries.compose]
 module = "androidx.compose:compose-bom"
@@ -27,3 +28,11 @@ version.ref = "room3"
 [libraries.room-compiler]
 module = "androidx.room3:room3-compiler"
 version.ref = "room3"
+
+[libraries.hilt-android]
+module = "com.google.dagger:hilt-android"
+version.ref = "hilt"
+
+[libraries.hilt-compiler]
+module = "com.google.dagger:hilt-compiler"
+version.ref = "hilt"

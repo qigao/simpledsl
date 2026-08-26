@@ -32,7 +32,7 @@ class PublishedAndroidConsumerContractTest {
 
         assertTrue(first.output.contains('SimpleDSL Android variant: debug'))
         assertTrue(first.output.contains('SimpleDSL Android variant: release'))
-        assertTrue(first.output.contains('Features: compose,ksp,room'))
+        assertTrue(first.output.contains('Features: compose,hilt,ksp,room'))
         assertTrue(first.output.contains('Platforms: compose'))
         assertTrue(first.output.contains('Platform bindings: implementation:compose'))
         assertTrue(first.output.contains('Configuration cache entry stored.'))
@@ -45,13 +45,13 @@ class PublishedAndroidConsumerContractTest {
                 "Second Android consumer build did not reuse configuration cache:\n${second.output}".toString())
         assertTrue(second.output.contains('SimpleDSL Android variant: debug'))
         assertTrue(second.output.contains('SimpleDSL Android variant: release'))
-        assertTrue(second.output.contains('Features: compose,ksp,room'))
+        assertTrue(second.output.contains('Features: compose,hilt,ksp,room'))
         assertTrue(second.output.contains('Platform bindings: implementation:compose'))
     }
 
     @Test
-    void assemblesPublishedAndroidApplicationAndLibraryWithComposeAndRoomCodegen() {
-        File fixture = copyFixture('published-android-compose-room-assemble')
+    void assemblesPublishedAndroidApplicationAndLibraryWithRoomAndHiltCodegen() {
+        File fixture = copyFixture('published-android-room-hilt-assemble')
 
         BuildResult result = build(
                 fixture,
@@ -62,7 +62,7 @@ class PublishedAndroidConsumerContractTest {
         Path generatedRoot = fixture.toPath().resolve('app/build/generated/ksp')
         assertTrue(
                 Files.isDirectory(generatedRoot),
-                "Room KSP output directory was not generated: ${generatedRoot}".toString())
+                "KSP output directory was not generated: ${generatedRoot}".toString())
 
         boolean generatedDatabaseImplementation = Files.walk(generatedRoot).withCloseable { paths ->
             paths.anyMatch { Path path ->
@@ -72,6 +72,15 @@ class PublishedAndroidConsumerContractTest {
         assertTrue(
                 generatedDatabaseImplementation,
                 "Room did not generate AppDatabase_Impl.kt under ${generatedRoot}".toString())
+
+        boolean generatedHiltApplication = Files.walk(generatedRoot).withCloseable { paths ->
+            paths.anyMatch { Path path ->
+                Files.isRegularFile(path) && path.fileName.toString() == 'Hilt_ExampleApplication.java'
+            }
+        }
+        assertTrue(
+                generatedHiltApplication,
+                "Hilt did not generate Hilt_ExampleApplication.java under ${generatedRoot}".toString())
     }
 
     private static BuildResult build(File fixture, List<String> arguments) {
