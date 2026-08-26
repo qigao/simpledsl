@@ -64,15 +64,16 @@ java_tooling=(
 )
 compose_compiler_tooling='org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin'
 ksp_tooling='com.google.devtools.ksp:symbol-processing-gradle-plugin'
+hilt_tooling='com.google.dagger:hilt-android-gradle-plugin'
 
-for coordinate in "${java_tooling[@]}" 'com.android.tools.build:gradle' "$compose_compiler_tooling" "$ksp_tooling"; do
+for coordinate in "${java_tooling[@]}" 'com.android.tools.build:gradle' "$compose_compiler_tooling" "$ksp_tooling" "$hilt_tooling"; do
   if contains_coordinate "$core_dependencies" "$coordinate"; then
     echo "SimpleDSL core dependency isolation violation: ${coordinate}" >&2
     exit 1
   fi
 done
 
-for coordinate in 'com.android.tools.build:gradle' "$compose_compiler_tooling" "$ksp_tooling"; do
+for coordinate in 'com.android.tools.build:gradle' "$compose_compiler_tooling" "$ksp_tooling" "$hilt_tooling"; do
   if contains_coordinate "$java_dependencies" "$coordinate"; then
     echo "SimpleDSL Java dependency isolation violation: ${coordinate}" >&2
     exit 1
@@ -126,6 +127,13 @@ fi
 
 if ! contains_coordinate "$android_dependencies" "$ksp_tooling"; then
   echo "SimpleDSL Android publication must depend on ${ksp_tooling}" >&2
+  echo 'Actual Android dependencies:' >&2
+  printf '%s\n' "$android_dependencies" >&2
+  exit 1
+fi
+
+if ! contains_coordinate "$android_dependencies" "$hilt_tooling"; then
+  echo "SimpleDSL Android publication must depend on ${hilt_tooling}" >&2
   echo 'Actual Android dependencies:' >&2
   printf '%s\n' "$android_dependencies" >&2
   exit 1

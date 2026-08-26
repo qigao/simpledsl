@@ -38,6 +38,7 @@ val jsonschema2pojoPluginVersion = libs.versions.jsonschema2pojo.get()
 val androidGradlePluginVersion = libs.versions.agp.get()
 val kotlinVersion = libs.versions.kotlin.get()
 val kspVersion = libs.versions.ksp.get()
+val hiltVersion = libs.versions.hilt.get()
 
 val generateDistributionMetadata = tasks.register<WriteProperties>("generateDistributionMetadata") {
     destinationFile.set(
@@ -51,6 +52,7 @@ val generateDistributionMetadata = tasks.register<WriteProperties>("generateDist
     property("androidGradlePluginVersion", androidGradlePluginVersion)
     property("kotlinVersion", kotlinVersion)
     property("kspVersion", kspVersion)
+    property("hiltVersion", hiltVersion)
 }
 
 sourceSets {
