@@ -2,7 +2,7 @@
 
 ## Unreleased - 0.3.0 development
 
-SimpleDSL 0.3.0 is evolving the project side into independent build backends. Phase A established the shared core and Java backend; Phase B added the Android backend foundation; Phase C added Jetpack Compose; Phase D added the KSP foundation; Phase E added Room; Phase F adds Hilt while continuing to reuse the same generic capability model. The release is still in development and has not been tagged.
+SimpleDSL 0.3.0 is evolving the project side into independent build backends. Phase A established the shared core and Java backend; Phase B added the Android backend foundation; Phase C added Jetpack Compose; Phase D added the KSP foundation; Phase E added Room; Phase F adds Hilt while continuing to reuse the same generic capability model; the Android Dynamic Feature foundation adds a third Android module type without broadening the capability model. The release is still in development and has not been tagged.
 
 ### Phase A: shared core and Java backend
 
@@ -89,6 +89,19 @@ SimpleDSL 0.3.0 is evolving the project side into independent build backends. Ph
 - Preserved configuration-cache store/reuse and app/library debug assembly with both Room and Hilt processors active in the same build.
 - TDD/CI chronology: CI #186 is the capability test-only RED; CI #187 adds the independent settings-version RED; CI #188 is GREEN for minimal production wiring and existing consumers; CI #189 confirms real Hilt assembly/code generation but exposes an incorrect test assumption that Hilt aggregate sources live under the KSP output directory; CI #190 is GREEN after correcting the proof to Hilt's actual `build/generated/hilt/component_sources` output.
 
+### Android Dynamic Feature module foundation
+
+- Added `android-dynamic-feature` as the third Android module type, alongside `android-application` and `android-library`; it is not a capability and does not change the generic module/capability model.
+- Added `androidDynamicFeature { namespace; baseModule }` plus application-side `dynamicFeature(':path')`, making topology explicit on both sides.
+- The base application owns AGP's `dynamicFeatures` set; the feature owns a normal `implementation` project dependency on `baseModule`. SimpleDSL performs no cross-project extension/model/task mutation and does not encode topology in repository snapshot schema.
+- Added settings ownership for `com.android.dynamic-feature` at the same managed AGP 9.0.1 baseline as application/library modules, so incompatible explicit plugin versions fail through the existing compatibility diagnostic.
+- Configured Dynamic Features only through AGP public `DynamicFeatureExtension` and `DynamicFeatureAndroidComponentsExtension`, reusing compileSdk 36, minSdk 24, Java 21, and AGP 9 built-in Kotlin without applying `org.jetbrains.kotlin.android`.
+- Reused the existing `simpledslAndroidVariants` public Android Components proof for Dynamic Feature debug/release variants and configuration-cache reuse.
+- Kept Compose, KSP, Room, and Hilt capability allow-lists unchanged: those capabilities remain app/library-only and fail normally on `android-dynamic-feature`.
+- Extended the real published consumer with `:payments`, a Kotlin feature source that compiles against a base-app symbol, and a real `:app:bundleDebug` App Bundle proof. CI opens the produced `.aab` and requires `payments/manifest/AndroidManifest.xml` while retaining the existing Room and Hilt generated-source proofs.
+- Preserved backend isolation; Dynamic Feature uses existing Android AGP tooling and adds no new core or Java backend dependency.
+- TDD/CI chronology: CI #195 is the clean module/API contract RED, CI #196 adds the independent settings-ownership RED, CI #199 is GREEN for production module/settings/AndroidComponents behavior, CI #201 proves feature compilation reaches bundle packaging and exposes missing base-app test-fixture `versionCode`, and CI #202 is GREEN for the real published Dynamic Feature App Bundle.
+
 ### 0.2.x to 0.3.0 Java migration
 
 Project builds change only the SimpleDSL project entry plugin:
@@ -150,7 +163,7 @@ module = "com.google.dagger:hilt-compiler"
 version.ref = "hilt"
 ```
 
-Application with Compose, Room, and Hilt:
+Application with Compose, Room, Hilt, and a Dynamic Feature topology edge:
 
 ```groovy
 plugins {
@@ -160,6 +173,7 @@ plugins {
 simpledsl {
     androidApplication {
         namespace = 'com.example.app'
+        dynamicFeature(':payments')
     }
     jetpackCompose()
     room()
@@ -183,9 +197,24 @@ simpledsl {
 }
 ```
 
+Dynamic Feature:
+
+```groovy
+plugins {
+    id 'io.github.qigao.simpledsl.android'
+}
+
+simpledsl {
+    androidDynamicFeature {
+        namespace = 'com.example.payments'
+        baseModule = ':app'
+    }
+}
+```
+
 ### Later Android phases
 
-KMP, dynamic features, benchmark module types, custom artifact transforms, and per-module SDK overrides remain later work. The Room Gradle plugin/schema lifecycle, Hilt testing/Navigation/custom-component abstractions, legacy variant APIs, task-name guessing, KSP1, KAPT, Room 2.x compatibility, and built-in-Kotlin opt-outs remain out of scope by design.
+KMP, benchmark module types, custom artifact transforms, per-module SDK overrides, capability support within Dynamic Feature modules, and richer Dynamic Feature delivery behavior remain later work. The Room Gradle plugin/schema lifecycle, Hilt testing/Navigation/custom-component abstractions, feature-specific Hilt injection, legacy variant APIs, task-name guessing, KSP1, KAPT, Room 2.x compatibility, and built-in-Kotlin opt-outs remain out of scope by design.
 
 ---
 
