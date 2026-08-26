@@ -49,8 +49,11 @@ def androidDsl = extensions.getByName('android')
 assert androidDsl.namespace == 'example.payments'
 assert androidDsl.compileSdk == 36
 assert androidDsl.defaultConfig.minSdk == 24
-assert androidDsl.compileOptions.sourceCompatibility == JavaVersion.VERSION_21
-assert androidDsl.compileOptions.targetCompatibility == JavaVersion.VERSION_21
+
+extensions.getByName('androidComponents').finalizeDsl { finalizedDsl ->
+    assert finalizedDsl.compileOptions.sourceCompatibility == JavaVersion.VERSION_21
+    assert finalizedDsl.compileOptions.targetCompatibility == JavaVersion.VERSION_21
+}
 
 assert configurations.getByName('implementation').dependencies.any {
     it instanceof org.gradle.api.artifacts.ProjectDependency && it.path == ':app'
