@@ -1,6 +1,7 @@
 package io.github.qigao.simpledsl.gradle.android.internal
 
 import com.android.build.api.variant.ApplicationAndroidComponentsExtension
+import com.android.build.api.variant.DynamicFeatureAndroidComponentsExtension
 import com.android.build.api.variant.LibraryAndroidComponentsExtension
 import io.github.qigao.simpledsl.gradle.android.diagnostics.SimpleDslAndroidVariantsTask
 import org.gradle.api.Action
@@ -16,6 +17,10 @@ final class SimpleDslAndroidComponents {
     }
 
     static void configure(Project project, LibraryAndroidComponentsExtension components) {
+        configureCallbacks(project, components)
+    }
+
+    static void configure(Project project, DynamicFeatureAndroidComponentsExtension components) {
         configureCallbacks(project, components)
     }
 
