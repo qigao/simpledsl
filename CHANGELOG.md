@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased - 0.3.0 development
+## 0.3.0 - 2026-08-26
 
-SimpleDSL 0.3.0 is evolving the project side into independent build backends. Phase A established the shared core and Java backend; Phase B added the Android backend foundation; Phase C added Jetpack Compose; Phase D added the KSP foundation; Phase E added Room; Phase F adds Hilt while continuing to reuse the same generic capability model; the Android Dynamic Feature foundation adds a third Android module type without broadening the capability model. The release is still in development and has not been tagged.
+SimpleDSL 0.3.0 splits project builds into independent Java/Spring and Android backends on a shared core, adds Android application/library/Dynamic Feature modules, Compose/KSP/Room/Hilt capabilities, and shared `dependsOn(...)` module dependencies backed by standard Gradle `ProjectDependency`. Repository policy/settings remain shared, backend artifacts remain isolated, and configuration-cache support is verified through real published consumers.
 
 ### Phase A: shared core and Java backend
 
@@ -102,6 +102,15 @@ SimpleDSL 0.3.0 is evolving the project side into independent build backends. Ph
 - Preserved backend isolation; Dynamic Feature uses existing Android AGP tooling and adds no new core or Java backend dependency.
 - TDD/CI chronology: CI #195 is the clean module/API contract RED, CI #196 adds the independent settings-ownership RED, CI #199 is GREEN for production module/settings/AndroidComponents behavior, CI #201 proves feature compilation reaches bundle packaging and exposes missing base-app test-fixture `versionCode`, and CI #202 is GREEN for the real published Dynamic Feature App Bundle.
 
+### Shared module dependencies
+
+- Added identical `dependsOn(':module')` and `dependsOn(configuration, ':module')` DSL entry points to the Java/Spring and Android backends.
+- `dependsOn(':module')` maps to standard `implementation project(':module')`; the explicit overload binds the standard Gradle `ProjectDependency` to the named existing configuration.
+- Dependency ownership stays with the caller module. SimpleDSL checks only that the target is present in the Gradle project graph and never configures the target project's extensions, tasks, or module model.
+- Absolute Gradle project paths are required; relative paths, self-dependency, missing targets, and missing configurations fail early with `SimpleDSL module dependency error` diagnostics.
+- Added real published-consumer proofs for Android `:app -> :feature` and Java `:app -> :model`, both using automatic project discovery without manual module include entries.
+- Kept dependency inference, source/import scanning, cycle analysis, a generic project graph model, and a grouped `depends {}` DSL out of scope.
+
 ### 0.2.x to 0.3.0 Java migration
 
 Project builds change only the SimpleDSL project entry plugin:
@@ -112,7 +121,7 @@ plugins {
     id 'io.github.qigao.simpledsl.build'
 }
 
-// 0.3.0 development
+// 0.3.0
 plugins {
     id 'io.github.qigao.simpledsl.java'
 }
