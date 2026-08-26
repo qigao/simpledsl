@@ -284,7 +284,7 @@ plugins {
         assertTrue(result.output.contains('SimpleDSL plugin compatibility error'))
         assertTrue(result.output.contains('Plugin: com.google.devtools.ksp'))
         assertTrue(result.output.contains('Requested: 9.9.9'))
-        assertTrue(result.output.contains('Managed: 2.2.10-2.0.2'))
+        assertTrue(result.output.contains('Managed: 2.3.9'))
     }
 
     @Test
