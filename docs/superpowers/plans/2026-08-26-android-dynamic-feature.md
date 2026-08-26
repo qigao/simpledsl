@@ -4,7 +4,7 @@
 
 **Goal:** Add Android Dynamic Feature as a third SimpleDSL Android module type with explicit base-application topology, settings-owned AGP resolution, public Android Components integration, and a real published App Bundle proof.
 
-**Architecture:** `android-dynamic-feature` is a module type, not a capability. The base application explicitly owns its `dynamicFeatures` paths, each feature explicitly owns `implementation project(baseModule)`, and neither project mutates the other. `simpledsl-android` owns all AGP-specific module code; `simpledsl-core` remains backend-neutral and changes only the existing distribution plugin-ownership map for `com.android.dynamic-feature`.
+**Architecture:** `android-dynamic-feature` is a module type, not a capability. The base application explicitly owns its `dynamicFeatures` paths, each feature explicitly owns `implementation project(baseModule)`, and neither project mutates the other. `simpledsl-android` owns AGP-specific module code; `simpledsl-core` remains backend-neutral and changes only the existing distribution plugin-ownership map for `com.android.dynamic-feature`.
 
 **Tech Stack:** Gradle 9.1.0, Android Gradle Plugin 9.0.1, compileSdk 36, minSdk 24, targetSdk 36 for the base app, Java 21, AGP 9 built-in Kotlin/KGP 2.2.10 runtime baseline, Gradle TestKit, JUnit 5, Android App Bundle ZIP verification.
 
@@ -17,7 +17,7 @@
 - Use AGP public APIs only: `DynamicFeatureExtension` and `DynamicFeatureAndroidComponentsExtension`; no AGP implementation classes, legacy variant APIs, or task-name interception.
 - Use AGP 9 built-in Kotlin; never apply `org.jetbrains.kotlin.android`.
 - Dynamic Feature is module type `android-dynamic-feature`; do not model it as a capability.
-- The application must explicitly register each feature path; the feature must explicitly declare its base-module project dependency.
+- The application explicitly registers each feature path; the feature explicitly declares its base-module project dependency.
 - Do not configure another project's extensions, tasks, or SimpleDSL model from either side.
 - Do not add project topology to repository TOML/YAML or snapshot schema.
 - Do not change `SimpleDslModuleModel`, `CapabilitySpec`, `CapabilityEngine`, or `DependencyBridge` for this feature.
@@ -25,32 +25,23 @@
 - Do not add Dynamic Feature Compose/KSP/Room/Hilt support, Hilt feature-DI semantics, Play Feature Delivery runtime APIs, delivery-mode convenience DSL, product flavors, asset packs, feature ProGuard DSL, or custom artifact transforms.
 - Preserve configuration-cache support, published consumer verification, backend isolation, and exact-head CI before merge.
 
-## File Structure
+## File Map
 
-New files:
+Create:
 
 ```text
-simpledsl-android/src/main/groovy/io/github/qigao/simpledsl/gradle/android/
-  SimpleDslAndroidDynamicFeatureSpec.groovy
-  module/SimpleDslAndroidDynamicFeaturePlugin.groovy
-
-simpledsl-android/src/test/groovy/io/github/qigao/simpledsl/gradle/android/
-  DynamicFeatureModuleTest.groovy
-
-simpledsl-core/src/test/groovy/io/github/qigao/simpledsl/gradle/settings/
-  DynamicFeaturePluginVersionTest.groovy
-
-integration-tests-android/consumer/payments/
-  build.gradle
-  src/main/AndroidManifest.xml
-  src/main/res/values/strings.xml
-  src/main/kotlin/example/payments/PaymentsFeature.kt
-
-integration-tests-android/consumer/app/src/main/kotlin/example/app/
-  BaseFeatureContract.kt
+simpledsl-android/src/main/groovy/io/github/qigao/simpledsl/gradle/android/SimpleDslAndroidDynamicFeatureSpec.groovy
+simpledsl-android/src/main/groovy/io/github/qigao/simpledsl/gradle/android/module/SimpleDslAndroidDynamicFeaturePlugin.groovy
+simpledsl-android/src/test/groovy/io/github/qigao/simpledsl/gradle/android/DynamicFeatureModuleTest.groovy
+simpledsl-core/src/test/groovy/io/github/qigao/simpledsl/gradle/settings/DynamicFeaturePluginVersionTest.groovy
+integration-tests-android/consumer/app/src/main/kotlin/example/app/BaseFeatureContract.kt
+integration-tests-android/consumer/payments/build.gradle
+integration-tests-android/consumer/payments/src/main/AndroidManifest.xml
+integration-tests-android/consumer/payments/src/main/res/values/strings.xml
+integration-tests-android/consumer/payments/src/main/kotlin/example/payments/PaymentsFeature.kt
 ```
 
-Existing files changed:
+Modify:
 
 ```text
 simpledsl-android/src/main/groovy/io/github/qigao/simpledsl/gradle/android/SimpleDslAndroidApplicationSpec.groovy
@@ -66,9 +57,9 @@ README.md
 CHANGELOG.md
 ```
 
-No change is expected in `simpledsl-android/build.gradle.kts`: `com.android.dynamic-feature` is provided by the existing `com.android.tools.build:gradle:9.0.1` implementation dependency.
+Do not modify `simpledsl-android/build.gradle.kts`: `com.android.dynamic-feature` comes from the existing `com.android.tools.build:gradle:9.0.1` implementation dependency.
 
-Execution should start from design head `0af61701f78402d2f61f2435a7786267e7ff7005` on an isolated implementation branch such as `feat/android-dynamic-feature`, so the approved spec and this plan travel with the implementation.
+Execution starts from design head `0af61701f78402d2f61f2435a7786267e7ff7005` on an isolated branch such as `feat/android-dynamic-feature`, so the approved spec and this plan travel with the implementation.
 
 ---
 
@@ -79,24 +70,68 @@ Execution should start from design head `0af61701f78402d2f61f2435a7786267e7ff700
 - Modify: `simpledsl-android/src/test/groovy/io/github/qigao/simpledsl/gradle/android/AndroidComponentsIntegrationTest.groovy`
 
 **Interfaces:**
-- Consumes existing public Android backend plugin: `io.github.qigao.simpledsl.android`.
-- Produces the test contract for:
-  - `androidApplication { dynamicFeature(':payments') }`
-  - `androidDynamicFeature { namespace = 'example.payments'; baseModule = ':app' }`
-  - module ID `android-dynamic-feature`
-  - plugin ID `com.android.dynamic-feature`
-  - feature `implementation` project dependency on `:app`
-  - Dynamic Feature public Android Components diagnostics.
+- Consumes: public plugin `io.github.qigao.simpledsl.android` and the existing Android policy snapshot test pattern.
+- Produces: contract for `androidApplication.dynamicFeature(String)`, `androidDynamicFeature { namespace; baseModule }`, module ID `android-dynamic-feature`, `com.android.dynamic-feature`, `implementation project(':app')`, and Dynamic Feature variant diagnostics.
 
-- [ ] **Step 1: Add a failing positive topology contract**
+- [ ] **Step 1: Create a two-module TestKit fixture that cannot fail for incidental manifest reasons**
 
-Create `DynamicFeatureModuleTest.groovy` with a two-project TestKit fixture. The key test body must be equivalent to:
+`DynamicFeatureModuleTest` must create:
 
 ```groovy
-@Test
-void configuresDynamicFeatureTopologyFromRepositoryPolicy() {
-    writeSettings()
-    writeAndroidModule('app', '''
+rootProject.name = 'dynamic-feature-consumer'
+include 'app', 'payments'
+```
+
+and register the same fake snapshot service used by existing Android tests:
+
+```groovy
+Map snapshot() {
+    [
+        schemaVersion: 2,
+        policies: [
+            android: [
+                java: 21,
+                compileSdk: 36,
+                minSdk: 24,
+                targetSdk: 36
+            ]
+        ],
+        platforms: [:],
+        libraries: [:],
+        plugins: [:]
+    ]
+}
+```
+
+The helper must write `<manifest />` for `:app`. For `:payments`, write a valid install-time Dynamic Feature manifest and its title resource even though the RED should fail before AGP packaging:
+
+```xml
+<manifest xmlns:dist="http://schemas.android.com/apk/distribution">
+    <dist:module
+        dist:instant="false"
+        dist:title="@string/payments_title">
+        <dist:delivery>
+            <dist:install-time />
+        </dist:delivery>
+        <dist:fusing dist:include="true" />
+    </dist:module>
+    <application />
+</manifest>
+```
+
+```xml
+<resources>
+    <string name="payments_title">Payments</string>
+</resources>
+```
+
+This ensures GREEN-stage failures cannot be blamed on a malformed feature fixture.
+
+- [ ] **Step 2: Add the positive module/topology contract**
+
+Use this application build:
+
+```groovy
 plugins { id 'io.github.qigao.simpledsl.android' }
 
 simpledsl {
@@ -107,8 +142,11 @@ simpledsl {
 }
 
 assert extensions.getByName('android').dynamicFeatures == [':payments'] as Set
-''')
-    writeAndroidModule('payments', '''
+```
+
+Use this feature build:
+
+```groovy
 plugins { id 'io.github.qigao.simpledsl.android' }
 
 simpledsl {
@@ -132,46 +170,13 @@ assert androidDsl.compileOptions.targetCompatibility == JavaVersion.VERSION_21
 assert configurations.getByName('implementation').dependencies.any {
     it instanceof org.gradle.api.artifacts.ProjectDependency && it.path == ':app'
 }
-''')
-
-    BuildResult result = build(':payments:help')
-    assertOutputContains(result, 'BUILD SUCCESSFUL')
-}
 ```
 
-The fixture's `settings.gradle` must register the same test dependency snapshot shape already used by `AndroidModuleConfigurationTest`, but include both projects:
+Run `:payments:help` and require `BUILD SUCCESSFUL` once production exists.
 
-```groovy
-rootProject.name = 'dynamic-feature-consumer'
-include 'app', 'payments'
-```
+- [ ] **Step 3: Add exact malformed-topology diagnostics**
 
-and Android policy:
-
-```groovy
-android: [
-    java: 21,
-    compileSdk: 36,
-    minSdk: 24,
-    targetSdk: 36
-]
-```
-
-`writeAndroidModule(name, buildScript)` must create `build.gradle` plus a minimal `src/main/AndroidManifest.xml` containing `<manifest />` so RED is caused by the missing SimpleDSL API, not fixture setup.
-
-- [ ] **Step 2: Add malformed topology and single-module-type contracts**
-
-Add tests that require SimpleDSL-authored diagnostics for these exact cases:
-
-```groovy
-simpledsl {
-    androidDynamicFeature {
-        namespace = 'example.payments'
-    }
-}
-```
-
-Expected output:
+Cover missing base module:
 
 ```text
 SimpleDSL Android configuration error
@@ -179,33 +184,21 @@ Project: :payments
 Problem: androidDynamicFeature requires baseModule
 ```
 
-Relative path:
-
-```groovy
-baseModule = 'app'
-```
-
-Expected output contains:
+Cover relative base path `baseModule = 'app'`:
 
 ```text
 Problem: baseModule must be an absolute Gradle project path beginning with ':'
 Value: app
 ```
 
-Self-reference:
-
-```groovy
-baseModule = ':payments'
-```
-
-Expected output contains:
+Cover self-reference `baseModule = ':payments'`:
 
 ```text
 Problem: androidDynamicFeature baseModule cannot reference the feature project itself
 Value: :payments
 ```
 
-Duplicate module declaration:
+Cover duplicate module declaration:
 
 ```groovy
 simpledsl {
@@ -217,29 +210,23 @@ simpledsl {
 }
 ```
 
-Expected output contains the existing contract:
+Expected:
 
 ```text
 Problem: exactly one Android module type may be declared
 ```
 
-Also cover malformed application feature paths with `dynamicFeature('payments')` and `dynamicFeature(':app')`; they must use equivalent absolute-path/self-reference diagnostics and must not inspect/configure the target project.
+Also cover application-side `dynamicFeature('payments')` and `dynamicFeature(':app')` with equivalent absolute-path/self-reference diagnostics. Tests must not require SimpleDSL to inspect or configure the referenced project to produce these errors.
 
-- [ ] **Step 3: Lock the capability boundary**
+- [ ] **Step 4: Lock the capability boundary in RED**
 
-Add one negative test with a valid base app and feature declaration followed by `jetpackCompose()` in `:payments`:
+Use a valid Dynamic Feature declaration followed by:
 
 ```groovy
-simpledsl {
-    androidDynamicFeature {
-        namespace = 'example.payments'
-        baseModule = ':app'
-    }
-    jetpackCompose()
-}
+jetpackCompose()
 ```
 
-Expected output must contain:
+Expected output contains:
 
 ```text
 Capability: compose
@@ -247,17 +234,16 @@ android-application
 android-library
 ```
 
-and must not claim that `android-dynamic-feature` is supported. This guards the first-slice scope before production code exists.
+and does not list `android-dynamic-feature` as an allowed type. `BuiltinAndroidCapabilities` must remain unchanged throughout this slice.
 
-- [ ] **Step 4: Add the Dynamic Feature Android Components RED**
+- [ ] **Step 5: Add a Dynamic Feature Android Components RED**
 
-Extend `AndroidComponentsIntegrationTest.groovy` with a two-module fixture and test:
+Extend `AndroidComponentsIntegrationTest` with a valid `:app` + `:payments` fixture and:
 
 ```groovy
 @Test
 void dynamicFeatureVariantsAreExposedAndConfigurationCacheIsReused() {
-    writeDynamicFeatureSettings()
-    writeDynamicFeatureAppAndFeature()
+    writeDynamicFeatureFixture()
 
     BuildResult first = build(':payments:simpledslAndroidVariants', '--configuration-cache')
     assertOutputContains(first, 'debug')
@@ -270,23 +256,22 @@ void dynamicFeatureVariantsAreExposedAndConfigurationCacheIsReused() {
 }
 ```
 
-The application must register `dynamicFeature(':payments')`; the feature must declare `baseModule = ':app'`. Do not use raw AGP Dynamic Feature configuration as a workaround in this test.
+The fixture must use only SimpleDSL's proposed public module DSL; do not configure raw AGP Dynamic Feature as a test workaround.
 
-- [ ] **Step 5: Run the targeted tests and prove RED**
+- [ ] **Step 6: Prove RED and commit test-only history**
 
 Run:
 
 ```bash
-./gradlew \
-  :simpledsl-android:test \
+./gradlew :simpledsl-android:test \
   --tests '*DynamicFeatureModuleTest' \
   --tests '*AndroidComponentsIntegrationTest.dynamicFeatureVariantsAreExposedAndConfigurationCacheIsReused' \
   --stacktrace
 ```
 
-Expected: FAIL because `SimpleDslAndroidApplicationSpec.dynamicFeature(...)` and/or `SimpleDslAndroidExtension.androidDynamicFeature(...)` do not exist. The failure must occur at the intended public contract, not because Android SDK, repositories, or fixture manifests are missing.
+Expected: FAIL because `dynamicFeature(...)` and/or `androidDynamicFeature(...)` are absent. The failure must be the intended API absence, not SDK/repository/manifest setup.
 
-- [ ] **Step 6: Commit the test-only RED**
+Commit:
 
 ```bash
 git add \
@@ -295,22 +280,20 @@ git add \
 git commit -m "test: define Android dynamic feature module contract"
 ```
 
-Do not add production files in this commit.
-
 ---
 
-### Task 2: Define the settings-owned `com.android.dynamic-feature` RED contract
+### Task 2: Define the settings-owned Dynamic Feature AGP RED contract
 
 **Files:**
 - Create: `simpledsl-core/src/test/groovy/io/github/qigao/simpledsl/gradle/settings/DynamicFeaturePluginVersionTest.groovy`
 
 **Interfaces:**
-- Consumes the existing settings resolution strategy and `SimpleDslDistribution.ownedPluginVersion(...)` contract.
-- Produces the requirement that `com.android.dynamic-feature` maps to `com.android.tools.build:gradle` using existing `androidGradlePluginVersion = 9.0.1` metadata.
+- Consumes: existing settings resolution strategy and `androidGradlePluginVersion` distribution metadata.
+- Produces: `com.android.dynamic-feature -> com.android.tools.build:gradle -> 9.0.1` ownership contract.
 
-- [ ] **Step 1: Add the independent plugin-version conflict test**
+- [ ] **Step 1: Add the independent settings conflict test**
 
-Create the test using the same TestKit shape as `HiltPluginVersionTest`, but with the Dynamic Feature plugin:
+Create:
 
 ```groovy
 package io.github.qigao.simpledsl.gradle.settings
@@ -365,7 +348,7 @@ plugins {
 }
 ```
 
-- [ ] **Step 2: Run the isolated settings test and prove RED**
+- [ ] **Step 2: Prove the settings RED**
 
 Run:
 
@@ -375,20 +358,20 @@ Run:
   --stacktrace
 ```
 
-Expected: FAIL because `com.android.dynamic-feature` is not yet in `SimpleDslDistribution`'s owned plugin maps, so the requested `9.9.9` does not produce the SimpleDSL compatibility diagnostic.
+Expected: FAIL because `com.android.dynamic-feature` is not yet settings-owned and therefore does not produce the SimpleDSL compatibility diagnostic.
 
-- [ ] **Step 3: Commit the second independent RED**
+- [ ] **Step 3: Commit the second RED**
 
 ```bash
 git add simpledsl-core/src/test/groovy/io/github/qigao/simpledsl/gradle/settings/DynamicFeaturePluginVersionTest.groovy
 git commit -m "test: require pinned Android dynamic feature plugin version"
 ```
 
-Do not change `SimpleDslDistribution` yet.
+Do not change distribution ownership in this commit.
 
 ---
 
-### Task 3: Implement the minimal Dynamic Feature module type and settings ownership
+### Task 3: Implement the minimal module type and settings ownership
 
 **Files:**
 - Create: `simpledsl-android/src/main/groovy/io/github/qigao/simpledsl/gradle/android/SimpleDslAndroidDynamicFeatureSpec.groovy`
@@ -401,53 +384,38 @@ Do not change `SimpleDslDistribution` yet.
 - Modify: `simpledsl-core/src/main/groovy/io/github/qigao/simpledsl/gradle/distribution/SimpleDslDistribution.groovy`
 
 **Interfaces:**
-- Produces `SimpleDslAndroidDynamicFeatureSpec`:
-
-```groovy
-abstract class SimpleDslAndroidDynamicFeatureSpec {
-    abstract Property<String> getNamespace()
-    abstract Property<String> getBaseModule()
-}
-```
-
-- Produces public extension methods:
-
-```groovy
-void androidDynamicFeature(Action<? super SimpleDslAndroidDynamicFeatureSpec> action)
-void androidDynamicFeature(Closure closure)
-```
-
-- Produces application spec API:
-
-```groovy
-abstract SetProperty<String> getDynamicFeatures()
-void dynamicFeature(String projectPath)
-```
-
+- Produces `SimpleDslAndroidDynamicFeatureSpec` with `Property<String> namespace` and `Property<String> baseModule`.
+- Produces `androidDynamicFeature(Action)` and `androidDynamicFeature(Closure)`.
+- Produces `SimpleDslAndroidApplicationSpec.getDynamicFeatures(): SetProperty<String>` and `dynamicFeature(String)`.
 - Produces module claim `android-dynamic-feature`.
-- Adds settings ownership:
+- Produces settings ownership of `com.android.dynamic-feature` through existing `androidGradlePluginVersion`.
 
-```text
-com.android.dynamic-feature -> com.android.tools.build:gradle -> androidGradlePluginVersion
-```
+- [ ] **Step 1: Add application declaration state**
 
-- [ ] **Step 1: Add the application feature-path API without cross-project behavior**
-
-Change `SimpleDslAndroidApplicationSpec.groovy` to import `SetProperty` and expose:
+`SimpleDslAndroidApplicationSpec` becomes:
 
 ```groovy
-abstract SetProperty<String> getDynamicFeatures()
+package io.github.qigao.simpledsl.gradle.android
 
-void dynamicFeature(String projectPath) {
-    dynamicFeatures.add(projectPath)
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.SetProperty
+
+abstract class SimpleDslAndroidApplicationSpec {
+    abstract Property<String> getNamespace()
+    abstract Property<String> getApplicationId()
+    abstract SetProperty<String> getDynamicFeatures()
+
+    void dynamicFeature(String projectPath) {
+        dynamicFeatures.add(projectPath)
+    }
 }
 ```
 
-Do not look up a `Project` here; this object is only declaration state.
+Do not inject or look up `Project` in the spec.
 
 - [ ] **Step 2: Add Android-local project-path validation**
 
-Extend `SimpleDslAndroidBase` with focused validation used by both sides of the topology. The behavior must be:
+Extend `SimpleDslAndroidBase` with:
 
 ```groovy
 static String requireBaseModule(Project project, Property<String> baseModule) {
@@ -458,7 +426,10 @@ static String requireBaseModule(Project project, Property<String> baseModule) {
                 "Project: ${project.path}\n" +
                 'Problem: androidDynamicFeature requires baseModule')
     }
-    requireExternalProjectPath(project, 'baseModule', value,
+    requireExternalProjectPath(
+            project,
+            'baseModule',
+            value,
             'androidDynamicFeature baseModule cannot reference the feature project itself')
 }
 
@@ -476,11 +447,40 @@ static Set<String> requireDynamicFeaturePaths(Project project, Collection<String
 }
 ```
 
-The private helper must reject blank/relative paths with an error naming the field, require a leading `:`, reject `value == project.path`, and include `Value: ...` for nonblank invalid values. It must not call `project.project(...)`, `evaluationDependsOn(...)`, or inspect the target project.
+The private helper must implement exactly these rules:
 
-- [ ] **Step 3: Create the Dynamic Feature spec and internal module plugin**
+```text
+blank or !startsWith(':') ->
+  SimpleDSL Android configuration error
+  Project: <current path>
+  Problem: <field> must be an absolute Gradle project path beginning with ':'
+  Value: <value>          # include for nonblank values
 
-`SimpleDslAndroidDynamicFeaturePlugin` must follow the existing application/library plugin shape and contain only feature-local behavior:
+value == project.path ->
+  SimpleDSL Android configuration error
+  Project: <current path>
+  Problem: <caller-provided self-reference message>
+  Value: <value>
+```
+
+It must not call `project.project`, `evaluationDependsOn`, target extensions, or target tasks.
+
+- [ ] **Step 3: Add the Dynamic Feature spec and internal module plugin**
+
+`SimpleDslAndroidDynamicFeatureSpec.groovy`:
+
+```groovy
+package io.github.qigao.simpledsl.gradle.android
+
+import org.gradle.api.provider.Property
+
+abstract class SimpleDslAndroidDynamicFeatureSpec {
+    abstract Property<String> getNamespace()
+    abstract Property<String> getBaseModule()
+}
+```
+
+`SimpleDslAndroidDynamicFeaturePlugin.groovy`:
 
 ```groovy
 package io.github.qigao.simpledsl.gradle.android.module
@@ -528,11 +528,11 @@ final class SimpleDslAndroidDynamicFeaturePlugin implements Plugin<Project> {
 }
 ```
 
-If AGP 9.0.1's public generic signatures require a minor type parameter spelling change at compile time, adjust imports/types only; do not fall back to internal AGP classes or untyped extension-name lookup in production.
+If AGP 9.0.1 requires explicit public generic parameters on either public type, adjust only public type spelling/imports. Do not fall back to AGP implementation classes or name-based production extension lookup.
 
-- [ ] **Step 4: Wire `androidDynamicFeature` into the Android extension**
+- [ ] **Step 4: Wire the third module type into `SimpleDslAndroidExtension`**
 
-Add both Action and Closure forms, matching the existing application/library API:
+Add imports and methods:
 
 ```groovy
 void androidDynamicFeature(Action<? super SimpleDslAndroidDynamicFeatureSpec> action) {
@@ -546,15 +546,20 @@ void androidDynamicFeature(Closure closure) {
     configure(spec, closure)
     project.pluginManager.apply(SimpleDslAndroidDynamicFeaturePlugin)
 }
+
+private SimpleDslAndroidDynamicFeatureSpec createDynamicFeatureSpec() {
+    rejectDuplicateModuleDeclaration()
+    project.extensions.create(
+            SimpleDslAndroidDynamicFeaturePlugin.SPEC_EXTENSION,
+            SimpleDslAndroidDynamicFeatureSpec)
+}
 ```
 
-`createDynamicFeatureSpec()` must call `rejectDuplicateModuleDeclaration()` and create the spec using `SimpleDslAndroidDynamicFeaturePlugin.SPEC_EXTENSION`. Expand the duplicate check to application/library/dynamic-feature spec extension names; keep the existing diagnostic text unchanged.
+Expand `rejectDuplicateModuleDeclaration()` to check the application, library, and Dynamic Feature spec extension names. Keep the existing conflict diagnostic text. Do not change `configureBackendCapability(...)`.
 
-Do not add any Dynamic Feature branch to `configureBackendCapability(...)`.
+- [ ] **Step 5: Map application feature paths to public AGP DSL**
 
-- [ ] **Step 5: Map application-declared feature paths onto AGP public DSL**
-
-In `SimpleDslAndroidApplicationPlugin`, after obtaining `ApplicationExtension`, validate and assign the declared paths:
+After `ApplicationExtension` is created/configured in `SimpleDslAndroidApplicationPlugin`, add:
 
 ```groovy
 Set<String> dynamicFeatures = SimpleDslAndroidBase.requireDynamicFeaturePaths(
@@ -563,11 +568,11 @@ Set<String> dynamicFeatures = SimpleDslAndroidBase.requireDynamicFeaturePaths(
 android.dynamicFeatures.addAll(dynamicFeatures)
 ```
 
-This is the only application-side topology mutation. Do not open/configure the feature projects.
+No feature project lookup/configuration is allowed here.
 
 - [ ] **Step 6: Add the typed Dynamic Feature Android Components overload**
 
-Add the import and one overload to `SimpleDslAndroidComponents`:
+`SimpleDslAndroidComponents` adds:
 
 ```groovy
 import com.android.build.api.variant.DynamicFeatureAndroidComponentsExtension
@@ -577,39 +582,46 @@ static void configure(Project project, DynamicFeatureAndroidComponentsExtension 
 }
 ```
 
-Do not replace the existing callback body or introduce a new variant abstraction.
+Reuse the existing `selector().all()`, `beforeVariants`, `onVariants`, and cache-safe diagnostic task implementation unchanged.
 
-- [ ] **Step 7: Add settings ownership for the third AGP plugin ID**
+- [ ] **Step 7: Add the third AGP plugin ID to existing settings ownership**
 
-Modify only the existing maps in `SimpleDslDistribution`:
+In `SimpleDslDistribution.OWNED_PLUGIN_MODULES` add:
 
 ```groovy
 'com.android.dynamic-feature' : 'com.android.tools.build:gradle'
 ```
 
-and:
+In `OWNED_PLUGIN_VERSION_KEYS` add:
 
 ```groovy
 'com.android.dynamic-feature' : 'androidGradlePluginVersion'
 ```
 
-Do not add a new version-catalog entry, distribution metadata property, or backend dependency: AGP 9.0.1 is already exported as `androidGradlePluginVersion` and already present on `simpledsl-android`'s implementation classpath.
+Do not add a new version catalog entry, metadata key, or Android backend dependency.
 
-- [ ] **Step 8: Run the RED suites and prove minimal GREEN**
+- [ ] **Step 8: Run core and Android targeted suites separately, then all plugin checks**
+
+Do not combine core/android test tasks behind one set of `--tests` filters; Gradle can treat nonmatching filters per task as an error.
 
 Run:
 
 ```bash
-./gradlew \
-  :simpledsl-core:test \
-  :simpledsl-android:test \
+./gradlew :simpledsl-core:test \
   --tests '*DynamicFeaturePluginVersionTest' \
+  --stacktrace
+```
+
+Then:
+
+```bash
+./gradlew :simpledsl-android:test \
   --tests '*DynamicFeatureModuleTest' \
   --tests '*AndroidComponentsIntegrationTest' \
   --stacktrace
 ```
 
-Then run the full plugin checks:
+Then:
 
 ```bash
 ./gradlew \
@@ -620,17 +632,18 @@ Then run the full plugin checks:
   --stacktrace
 ```
 
-Expected: GREEN. Existing capability tests must remain green with their allow-lists unchanged.
+Expected: GREEN, including unchanged existing capability allow-lists.
 
-- [ ] **Step 9: Inspect the production diff for architecture leakage**
+- [ ] **Step 9: Inspect unstaged/staged production diff for architecture leakage**
 
-Run:
+Before committing, run:
 
 ```bash
-git diff --name-only HEAD~1..HEAD
+git diff --name-only
+git diff --cached --name-only
 ```
 
-before commit (or equivalent staged-file review) and verify there is no production change to:
+The production diff must not require changes to:
 
 ```text
 SimpleDslModuleModel.groovy
@@ -639,11 +652,12 @@ CapabilityEngine.groovy
 DependencyBridge.groovy
 BuiltinAndroidCapabilities.groovy
 simpledsl-android/build.gradle.kts
+repository manifest/snapshot schema
 ```
 
-If one of those appears necessary solely for this feature, stop and re-evaluate against the spec instead of expanding the abstraction.
+If one appears necessary solely for Dynamic Feature, stop and revisit the approved spec rather than generalizing the architecture.
 
-- [ ] **Step 10: Commit the minimal production GREEN**
+- [ ] **Step 10: Commit minimal production GREEN**
 
 ```bash
 git add \
@@ -666,30 +680,14 @@ git commit -m "feat: add Android dynamic feature module type"
 - Modify: `integration-tests-android/src/test/groovy/io/github/qigao/simpledsl/PublishedAndroidConsumerContractTest.groovy`
 
 **Interfaces:**
-- Base app public DSL:
+- Base app: `dynamicFeature(':payments')`.
+- Feature: `androidDynamicFeature { namespace = 'example.payments'; baseModule = ':app' }`.
+- Real code edge: `example.payments.PaymentsFeature` imports `example.app.BaseFeatureContract`.
+- Bundle proof: debug AAB contains `payments/manifest/AndroidManifest.xml`.
 
-```groovy
-androidApplication {
-    namespace = 'example.app'
-    dynamicFeature(':payments')
-}
-```
+- [ ] **Step 1: Register `:payments` from the existing published application**
 
-- Feature public DSL:
-
-```groovy
-androidDynamicFeature {
-    namespace = 'example.payments'
-    baseModule = ':app'
-}
-```
-
-- Real source dependency: feature Kotlin imports `example.app.BaseFeatureContract`.
-- Final bundle proof: generated AAB contains `payments/manifest/AndroidManifest.xml`.
-
-- [ ] **Step 1: Register `:payments` from the published base application**
-
-Modify only the application module declaration block:
+Modify only the application declaration:
 
 ```groovy
 simpledsl {
@@ -703,11 +701,11 @@ simpledsl {
 }
 ```
 
-Keep all existing Room/Hilt assertions unchanged so Dynamic Feature is proven without weakening the Phase E/F consumer contract.
+Keep all existing Compose/Room/Hilt dependency/plugin assertions.
 
-- [ ] **Step 2: Add a real base-app type for feature compilation**
+- [ ] **Step 2: Add a base-app type used only to prove feature compilation**
 
-Create `BaseFeatureContract.kt`:
+Create:
 
 ```kotlin
 package example.app
@@ -717,11 +715,11 @@ object BaseFeatureContract {
 }
 ```
 
-Do not move existing Room/Hilt sources or introduce a library merely to make the dependency easier.
+Do not move it to a library: the proof must demonstrate the documented feature-to-base application compile edge.
 
-- [ ] **Step 3: Add the published Dynamic Feature module**
+- [ ] **Step 3: Add the published `:payments` module without capabilities**
 
-Create `payments/build.gradle`:
+`payments/build.gradle`:
 
 ```groovy
 plugins {
@@ -743,13 +741,13 @@ assert configurations.getByName('implementation').dependencies.any {
 }
 ```
 
-Do not enable `jetpackCompose()`, `ksp()`, `room()`, `hilt()`, or generic equivalents in this module.
+Do not call Compose/KSP/Room/Hilt methods in this module.
 
-The settings plugin already performs module discovery, so adding the `payments/build.gradle` directory must be enough for the consumer fixture; do not add manual `include ':payments'` unless a failing published-consumer test proves module discovery does not include it. If discovery fails, diagnose that behavior before modifying settings because the repository's established consumer contract intentionally relies on automatic discovery.
+The consumer settings plugin already performs module discovery. Adding `payments/build.gradle` should therefore discover `:payments`; do not add a manual `include` unless a failing published-consumer test proves discovery does not cover the new folder. If that happens, diagnose discovery before changing settings because automatic discovery is part of the established consumer contract.
 
-- [ ] **Step 4: Add a valid install-time Dynamic Feature manifest**
+- [ ] **Step 4: Add valid feature packaging metadata**
 
-Create `payments/src/main/AndroidManifest.xml`:
+`payments/src/main/AndroidManifest.xml`:
 
 ```xml
 <manifest xmlns:dist="http://schemas.android.com/apk/distribution">
@@ -765,7 +763,7 @@ Create `payments/src/main/AndroidManifest.xml`:
 </manifest>
 ```
 
-Create `payments/src/main/res/values/strings.xml`:
+`payments/src/main/res/values/strings.xml`:
 
 ```xml
 <resources>
@@ -773,11 +771,11 @@ Create `payments/src/main/res/values/strings.xml`:
 </resources>
 ```
 
-This is fixture metadata required for bundle packaging, not a SimpleDSL delivery-mode API.
+This is fixture-level Play Feature Delivery metadata, not a new SimpleDSL delivery DSL.
 
-- [ ] **Step 5: Add the real feature-to-base Kotlin dependency proof**
+- [ ] **Step 5: Add the feature source that imports the base application**
 
-Create `PaymentsFeature.kt`:
+Create:
 
 ```kotlin
 package example.payments
@@ -789,21 +787,21 @@ object PaymentsFeature {
 }
 ```
 
-The published consumer must compile this source successfully under AGP built-in Kotlin without applying `org.jetbrains.kotlin.android`.
+It must compile under AGP built-in Kotlin with no Kotlin Android plugin.
 
-- [ ] **Step 6: Extend the configuration-cache/variant published proof**
+- [ ] **Step 6: Extend published variant/configuration-cache coverage**
 
 In `resolvesPublishedAndroidMarkersAndReusesConfigurationCache()`, add:
 
-```groovy
-':payments:simpledslAndroidVariants'
+```text
+:payments:simpledslAndroidVariants
 ```
 
-to both first and second builds. Existing assertions for debug/release and `Features: compose,hilt,ksp,room` remain. Do not assert the application/library capability list for `:payments`; the feature intentionally has no capabilities in this slice.
+to both runs. Keep existing app/library capability assertions. Do not require a feature capability list; this first slice deliberately enables none.
 
-- [ ] **Step 7: Add the real AAB packaging test**
+- [ ] **Step 7: Expand the assembly proof to a real base-app bundle and inspect it**
 
-Add a third published-consumer test or rename the existing assemble test to make the expanded proof explicit. Build with:
+Rename the existing method so the name states Room/Hilt + Dynamic Feature bundle coverage. Build:
 
 ```groovy
 BuildResult result = build(
@@ -811,13 +809,20 @@ BuildResult result = build(
         consumerArguments(':app:bundleDebug', ':feature:assembleDebug'))
 ```
 
-Keep the existing Room and Hilt generated-source assertions. Then locate the AAB under:
+Keep the existing assertions for:
+
+```text
+app/build/generated/ksp/**/AppDatabase_Impl.kt
+app/build/generated/hilt/component_sources/**/Hilt_ExampleApplication.java
+```
+
+Then locate exactly one `.aab` under:
 
 ```text
 app/build/outputs/bundle/debug
 ```
 
-using `Files.walk`, require exactly one regular file ending in `.aab`, and inspect it with `java.util.zip.ZipFile`:
+and inspect it:
 
 ```groovy
 Path bundleRoot = fixture.toPath().resolve('app/build/outputs/bundle/debug')
@@ -826,7 +831,9 @@ List<Path> bundles = Files.walk(bundleRoot).withCloseable { paths ->
         Files.isRegularFile(path) && path.fileName.toString().endsWith('.aab')
     }.toList()
 }
-assertTrue(bundles.size() == 1, "Expected one debug AAB under ${bundleRoot}, found ${bundles}")
+assertTrue(
+        bundles.size() == 1,
+        "Expected one debug AAB under ${bundleRoot}, found ${bundles}".toString())
 
 new java.util.zip.ZipFile(bundles.single().toFile()).withCloseable { zip ->
     assertTrue(
@@ -835,11 +842,9 @@ new java.util.zip.ZipFile(bundles.single().toFile()).withCloseable { zip ->
 }
 ```
 
-If the AGP 9.0.1 bundle uses a confirmed different stable feature-prefix representation, inspect the produced AAB once, document the actual public bundle structure in the test assertion, and change only this proof path; do not weaken the test to merely check that some `.aab` exists.
+If AGP 9.0.1 proves a different stable feature-module prefix in the actual AAB, inspect the produced ZIP once and correct only this exact assertion to the observed module entry. Do not weaken the proof to “an AAB exists”.
 
-- [ ] **Step 8: Run the real published consumer and backend isolation**
-
-Run:
+- [ ] **Step 8: Run the published consumer and isolation gate**
 
 ```bash
 ./gradlew \
@@ -849,19 +854,19 @@ Run:
   --stacktrace
 ```
 
-Expected: GREEN for:
+Expected GREEN proves:
 
 ```text
-existing app/library Compose + Room + Hilt consumer
-payments debug/release Android Components variants
+existing app/library Compose + Room + Hilt behavior
+payments debug/release variants
 configuration-cache store/reuse
-feature Kotlin -> base app type compilation
+feature source -> base app source compilation
 :app:bundleDebug
-payments/manifest/AndroidManifest.xml inside the AAB
+payments feature entry in the AAB
 backend isolation
 ```
 
-The isolation script should require no new coordinate because Dynamic Feature reuses the already-required `com.android.tools.build:gradle` dependency.
+`verify-backend-isolation.sh` should not change because Dynamic Feature reuses the already-required `com.android.tools.build:gradle` coordinate.
 
 - [ ] **Step 9: Commit the published consumer proof**
 
@@ -877,16 +882,15 @@ git commit -m "test: prove published Android dynamic feature bundle"
 **Files:**
 - Modify: `README.md`
 - Modify: `CHANGELOG.md`
-- No expected workflow file changes.
+- No workflow change expected.
 
 **Interfaces:**
-- Documents the third Android module type without changing the three public SimpleDSL plugin IDs.
-- Records Dynamic Feature as module topology, not capability behavior.
-- Preserves #26 as the future-roadmap index and #27 as the execution issue.
+- Documents three Android module types without adding a fourth public SimpleDSL plugin.
+- Keeps #26 as roadmap index and #27 as the Dynamic Feature execution issue.
 
-- [ ] **Step 1: Update README Android module documentation**
+- [ ] **Step 1: Document the public topology in README**
 
-Change the Android backend description from application/library-only to application/library/dynamic-feature module configuration. Add one focused section after the library example:
+Update the Android backend description to application/library/dynamic-feature. Add:
 
 ```groovy
 // :app
@@ -898,6 +902,8 @@ simpledsl {
 }
 ```
 
+and:
+
 ```groovy
 // :payments
 simpledsl {
@@ -908,44 +914,36 @@ simpledsl {
 }
 ```
 
-Explain in prose:
+State explicitly:
 
 ```text
-- the base application owns the AGP dynamicFeatures set;
-- the feature owns implementation project(baseModule);
-- SimpleDSL does not mutate projects across the graph;
-- Dynamic Feature uses the same AGP 9.0.1 / compileSdk 36 / Java 21 repository policy;
-- existing Compose/KSP/Room/Hilt capabilities are not yet enabled for android-dynamic-feature.
+base application owns AGP dynamicFeatures
+feature owns implementation project(baseModule)
+no cross-project mutation
+dynamic feature reuses AGP 9.0.1 / compileSdk 36 / Java 21 policy
+Compose/KSP/Room/Hilt are not yet supported on android-dynamic-feature
 ```
 
-Do not describe delivery-mode DSL or imply Hilt Dynamic Feature support.
+Do not document delivery-mode DSL or Hilt feature DI as supported.
 
-- [ ] **Step 2: Update CHANGELOG without renumbering the release**
+- [ ] **Step 2: Record the foundation in CHANGELOG**
 
-Under `Unreleased - 0.3.0 development`, add a new section such as:
-
-```markdown
-### Android Dynamic Feature module foundation
-```
-
-Record:
+Under `Unreleased - 0.3.0 development`, add `### Android Dynamic Feature module foundation` and record:
 
 ```text
 android-dynamic-feature module type
 explicit bilateral base/feature topology
 settings-owned com.android.dynamic-feature at AGP 9.0.1
 public DynamicFeatureExtension / DynamicFeatureAndroidComponentsExtension only
-AGP built-in Kotlin, no org.jetbrains.kotlin.android
-real published AAB containing payments feature
-configuration-cache + backend-isolation proof
-existing capabilities deliberately not broadened
+AGP built-in Kotlin; no org.jetbrains.kotlin.android
+real published AAB containing payments module
+configuration-cache and backend-isolation proof
+existing capability allow-lists deliberately unchanged
 ```
 
-Remove `dynamic features` from the generic “later Android phases” list, while leaving KMP, benchmark modules, custom artifact transforms, per-module SDK overrides, and Dynamic Feature capability/delivery follow-ups as later work.
+Remove generic `dynamic features` from the later-work list, but keep capability support inside Dynamic Feature, delivery behavior, KMP, benchmark modules, custom artifact transforms, and per-module SDK overrides as later work.
 
-- [ ] **Step 3: Run the local equivalent of every CI gate from a clean workspace**
-
-Run exactly:
+- [ ] **Step 3: Run the local equivalent of every CI gate from clean state**
 
 ```bash
 ./gradlew clean --stacktrace
@@ -968,80 +966,79 @@ grep -Fq 'gradle-9.1.0-bin.zip' gradle/wrapper/gradle-wrapper.properties
 test -s gradle/wrapper/gradle-wrapper.jar
 ```
 
-Expected: every command succeeds. Do not claim the implementation complete from targeted tests alone.
+Every command must succeed before completion claims.
 
-- [ ] **Step 4: Review the complete diff against the spec before documentation commit**
+- [ ] **Step 4: Review the complete implementation diff against the approved boundary**
 
-Check:
+Run:
 
 ```bash
 git diff --name-only 0af61701f78402d2f61f2435a7786267e7ff7005...HEAD
 ```
 
-Expected production surface is limited to the files listed in this plan. Specifically verify:
+Verify these production files are absent:
 
 ```text
-SimpleDslModuleModel.groovy            absent
-CapabilitySpec.groovy                  absent
-CapabilityEngine.groovy                absent
-DependencyBridge.groovy                absent
-BuiltinAndroidCapabilities.groovy      absent
-simpledsl-android/build.gradle.kts      absent
-settings/snapshot manifest schema      absent
+SimpleDslModuleModel.groovy
+CapabilitySpec.groovy
+CapabilityEngine.groovy
+DependencyBridge.groovy
+BuiltinAndroidCapabilities.groovy
+simpledsl-android/build.gradle.kts
+manifest/snapshot schema files
 ```
 
-Also search the production diff for forbidden implementation patterns:
+Search introduced production code for forbidden patterns:
 
 ```text
 applicationVariants
 BaseExtension
 AppExtension
 evaluationDependsOn
-project.evaluationDependsOn
 taskGraph
 org.jetbrains.kotlin.android
 ```
 
-Any occurrence introduced by this slice requires investigation before proceeding.
+Any introduced occurrence requires investigation before proceeding.
 
-- [ ] **Step 5: Commit docs/final branch state**
+- [ ] **Step 5: Commit documentation/final branch state**
 
 ```bash
 git add README.md CHANGELOG.md
 git commit -m "docs: document Android dynamic feature module"
 ```
 
-- [ ] **Step 6: Push the implementation branch and open a draft PR for #27**
+- [ ] **Step 6: Push and open a draft PR for #27**
 
-Use title:
+Title:
 
 ```text
 feat: add Android dynamic feature module
 ```
 
-PR body must summarize:
+Body must cover:
 
 ```text
-- public androidDynamicFeature module DSL
-- explicit base app dynamicFeature(path) + feature baseModule relationship
-- no cross-project mutation
-- settings-owned com.android.dynamic-feature / AGP 9.0.1
-- public DynamicFeatureExtension + DynamicFeatureAndroidComponentsExtension
-- published feature Kotlin -> base type compile proof
-- debug AAB contains payments feature module
-- configuration-cache and backend-isolation proof
-- existing capability allow-lists unchanged
-- RED/GREEN commit and CI chronology
+public androidDynamicFeature module DSL
+explicit app dynamicFeature(path) + feature baseModule topology
+no cross-project mutation
+settings-owned com.android.dynamic-feature / AGP 9.0.1
+public DynamicFeatureExtension + DynamicFeatureAndroidComponentsExtension
+feature Kotlin -> base app type compile proof
+debug AAB contains payments feature module
+configuration-cache + backend-isolation proof
+existing capability allow-lists unchanged
+RED/GREEN evidence
 
 Closes #27
 Ref #26
 ```
 
-Keep the PR draft until all remote gates are green.
+Keep it draft until remote exact-head CI is green.
 
-- [ ] **Step 7: Run/fetch remote CI and require exact-head GREEN**
+- [ ] **Step 7: Require remote exact-head GREEN**
 
-The repository CI already runs the required steps; do not edit `.github/workflows/ci.yml` merely for this feature. For the final PR head, verify one CI run whose head SHA is exactly the current branch head and whose `verify` job has every step successful:
+Use the existing CI unchanged. On the final PR head, require one CI run whose head SHA exactly matches the branch head and whose `verify` job has all of these successful:
 
 ```text
 Verify Android SDK baseline
@@ -1051,11 +1048,11 @@ Verify published consumer contracts
 Verify wrapper metadata
 ```
 
-If CI fails, diagnose the specific failure, add the smallest corrective commit, and repeat the exact-head gate. Preserve RED/GREEN history; do not squash away evidence during development.
+If CI fails, diagnose the specific failure, make the smallest corrective commit, and repeat the exact-head gate. Preserve RED/GREEN history.
 
-- [ ] **Step 8: Synchronize #27 and PR evidence without creating a new code head**
+- [ ] **Step 8: Synchronize #27 and PR evidence without creating a new git head**
 
-Update #27 and the PR body with:
+Record in issue/PR metadata:
 
 ```text
 contract RED commit/run
@@ -1065,9 +1062,9 @@ published AAB consumer GREEN commit/run
 final exact-head SHA/run
 ```
 
-Issue/PR metadata updates must not create a new git commit after the final exact-head run.
+Do not commit evidence-only metadata after the final exact-head run.
 
-- [ ] **Step 9: Mark PR ready and perform the final merge gate**
+- [ ] **Step 9: Ready/merge gate remains separately authorized**
 
 Freshly verify on the same head:
 
@@ -1078,27 +1075,29 @@ not draft
 no unresolved review threads
 no blocking reviews/comments
 exact-head CI success
-base master has not invalidated mergeability
+base master still compatible
 ```
 
-Do not merge until a separate explicit user authorization after reporting this gate. When authorized, merge with `expected_head_sha=<final-head-sha>`, then verify PR merged, #27 closed by `Closes #27`, and `master` points to the returned merge commit.
+Report that gate and stop. Do not merge until a separate explicit user authorization. On authorization, merge with `expected_head_sha=<final-head-sha>`, then verify the PR is merged, #27 closed by `Closes #27`, and `master` points to the returned merge commit.
 
 ---
 
 ## Self-Review Checklist
 
-Before execution handoff, verify the plan against the approved spec:
-
-- [ ] Module/capability distinction is preserved.
-- [ ] Both sides of Dynamic Feature topology are explicit.
-- [ ] No cross-project mutation is introduced.
-- [ ] `com.android.dynamic-feature` reuses existing AGP 9.0.1 ownership and artifact.
-- [ ] Dynamic Feature repository policy omits targetSdk ownership.
-- [ ] Public Android Components proof covers debug/release and configuration cache.
-- [ ] Existing capabilities remain application/library-only.
-- [ ] Real feature source compiles against base-app source.
-- [ ] Final proof builds a base application AAB and inspects the feature entry.
-- [ ] Existing Room/Hilt generated-source proofs remain intact.
-- [ ] Backend isolation remains unchanged and green.
-- [ ] No generic core graph/codegen/capability abstraction is introduced.
-- [ ] Final merge remains a separate explicitly authorized action after exact-head GREEN.
+- [x] Every approved spec requirement maps to a Task above.
+- [x] No placeholder/TBD implementation step remains.
+- [x] Dynamic Feature remains a module type, never a capability.
+- [x] Both topology directions are explicit and local.
+- [x] No cross-project mutation or repository graph schema is introduced.
+- [x] Settings ownership reuses existing AGP 9.0.1 metadata/artifact.
+- [x] Dynamic Feature does not own targetSdk.
+- [x] Public Android Components coverage includes debug/release + configuration cache.
+- [x] Existing capabilities remain application/library-only.
+- [x] Real feature source imports a real base-app type.
+- [x] Final packaging proof inspects the AAB feature entry.
+- [x] Existing Room/Hilt generated-source proofs remain intact.
+- [x] Backend isolation remains unchanged and required.
+- [x] Generic core module/capability/dependency mechanics remain unchanged.
+- [x] Core/android `--tests` filters are executed in separate invocations.
+- [x] TestKit Dynamic Feature fixtures include valid feature packaging metadata.
+- [x] Final merge remains a separately authorized action after exact-head GREEN.
