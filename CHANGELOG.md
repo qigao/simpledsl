@@ -2,7 +2,7 @@
 
 ## Unreleased - 0.3.0 development
 
-SimpleDSL 0.3.0 is evolving the project side into independent build backends. Phase A established the shared core and Java backend; Phase B added the Android backend foundation; Phase C adds the first Android backend-specific capability with Jetpack Compose. The release is still in development and has not been tagged.
+SimpleDSL 0.3.0 is evolving the project side into independent build backends. Phase A established the shared core and Java backend; Phase B added the Android backend foundation; Phase C added Jetpack Compose; Phase D adds the KSP foundation for later Android code-generation capabilities. The release is still in development and has not been tagged.
 
 ### Phase A: shared core and Java backend
 
@@ -44,6 +44,19 @@ SimpleDSL 0.3.0 is evolving the project side into independent build backends. Ph
 - Extended backend isolation so Compose compiler tooling is Android-only and absent from core/Java publications.
 - Added real published app/library Compose consumers using AGP 9 built-in Kotlin. CI compiles real `@Composable` Kotlin sources, assembles both debug artifacts, verifies `Features: compose` / `implementation:compose`, and proves configuration-cache reuse.
 - Kept the repository baseline at AGP 9.0.1 / compileSdk 36. Compose 1.12's API 37 line requires a newer AGP baseline and is intentionally outside Phase C.
+
+### Phase D: KSP capability foundation
+
+- Added semantic Android capability `ksp`, valid for `android-application` and `android-library` modules.
+- Added public DSL sugar `ksp()` and equivalent generic entry `capability('ksp')`; both route through the existing `CapabilityEngine`.
+- Added settings ownership for `com.google.devtools.ksp` and its plugin coordinate so incompatible consumer version overrides fail through the existing compatibility diagnostic.
+- Pinned the validated KSP2 baseline to 2.3.9. The initial AGP 9.0 compatibility floor `2.2.10-2.0.2` was rejected by TDD because it still uses `kotlin.sourceSets` under AGP built-in Kotlin; KSP 2.3.1 is the line that introduced AGP 9 built-in Kotlin support.
+- Kept AGP 9 built-in Kotlin enabled and continued to forbid `org.jetbrains.kotlin.android`; no compatibility opt-out such as `android.disallowKotlinSourceSets=false` was added.
+- Kept `simpledsl-core` and the generic capability model unchanged. No code-generation framework, activation callback, processor DSL, or generated-source abstraction was introduced.
+- Kept KSP Gradle tooling Android-only and extended published backend isolation to forbid it in core/Java and require it in the Android artifact.
+- Added real published consumers: the application activates `ksp()` while the library exercises `capability('ksp')`; both prove the KSP plugin and standard `ksp` configuration are available alongside Compose and AGP built-in Kotlin.
+- Published-consumer CI continues to compile real Kotlin/Compose sources, assemble application/library debug artifacts, and reuse Gradle configuration cache with KSP active.
+- Room and Hilt remain later capabilities. They can build on this foundation by requiring `ksp` and binding their processors through the existing dependency configuration mechanism instead of creating a second code-generation subsystem.
 
 ### 0.2.x to 0.3.0 Java migration
 
@@ -88,7 +101,7 @@ module = "androidx.compose.ui:ui"
 platform = "compose"
 ```
 
-Application with Compose:
+Application with Compose and KSP:
 
 ```groovy
 plugins {
@@ -100,6 +113,7 @@ simpledsl {
         namespace = 'com.example.app'
     }
     jetpackCompose()
+    ksp()
 }
 ```
 
@@ -114,12 +128,13 @@ simpledsl {
     androidLibrary {
         namespace = 'com.example.feature'
     }
+    capability('ksp')
 }
 ```
 
 ### Later Android phases
 
-Room, Hilt, KSP, KMP, dynamic features, benchmark module types, custom artifact transforms, and per-module SDK overrides remain later work. Legacy variant APIs and task-name guessing remain out of scope by design.
+Room, Hilt, KMP, dynamic features, benchmark module types, custom artifact transforms, and per-module SDK overrides remain later work. Legacy variant APIs, task-name guessing, KSP1, and built-in-Kotlin opt-outs remain out of scope by design.
 
 ---
 

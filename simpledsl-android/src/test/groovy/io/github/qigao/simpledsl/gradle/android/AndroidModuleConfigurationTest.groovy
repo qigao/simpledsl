@@ -189,6 +189,74 @@ simpledsl {
     }
 
     @Test
+    void configuresKspCapabilityForAndroidApplication() {
+        writeSettings('app', 36)
+        writeModule('app', androidPluginPrelude() + '''
+
+simpledsl {
+    androidApplication {
+        namespace = 'example.ksp.app'
+    }
+    ksp()
+}
+
+assert pluginManager.hasPlugin('com.google.devtools.ksp')
+assert !pluginManager.hasPlugin('org.jetbrains.kotlin.android')
+assert configurations.findByName('ksp') != null
+
+def model = extensions.getByName('simpledslModuleModel')
+assert model.capabilities.get().contains('ksp')
+''')
+
+        BuildResult result = build(':app:help')
+
+        assertOutputContains(result, 'BUILD SUCCESSFUL')
+    }
+
+    @Test
+    void configuresKspThroughGenericCapabilityForAndroidLibrary() {
+        writeSettings('feature', null)
+        writeModule('feature', androidPluginPrelude() + '''
+
+simpledsl {
+    androidLibrary {
+        namespace = 'example.ksp.feature'
+    }
+    capability('ksp')
+}
+
+assert pluginManager.hasPlugin('com.google.devtools.ksp')
+assert !pluginManager.hasPlugin('org.jetbrains.kotlin.android')
+assert configurations.findByName('ksp') != null
+
+def model = extensions.getByName('simpledslModuleModel')
+assert model.capabilities.get().contains('ksp')
+''')
+
+        BuildResult result = build(':feature:help')
+
+        assertOutputContains(result, 'BUILD SUCCESSFUL')
+    }
+
+    @Test
+    void rejectsKspCapabilityWithoutAndroidModuleType() {
+        writeSettings('feature', 36)
+        writeModule('feature', androidPluginPrelude() + '''
+
+simpledsl {
+    ksp()
+}
+''')
+
+        BuildResult result = buildAndFail(':feature:help')
+
+        assertOutputContains(result, 'Capability: ksp')
+        assertOutputContains(result, 'requires a module type')
+        assertOutputContains(result, 'android-application')
+        assertOutputContains(result, 'android-library')
+    }
+
+    @Test
     void rejectsApplicationPolicyWithoutTargetSdk() {
         writeSettings('app', null)
         writeModule('app', androidPluginPrelude() + '''

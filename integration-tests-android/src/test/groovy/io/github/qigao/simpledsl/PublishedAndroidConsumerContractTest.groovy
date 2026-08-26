@@ -32,7 +32,7 @@ class PublishedAndroidConsumerContractTest {
 
         assertTrue(first.output.contains('SimpleDSL Android variant: debug'))
         assertTrue(first.output.contains('SimpleDSL Android variant: release'))
-        assertTrue(first.output.contains('Features: compose'))
+        assertTrue(first.output.contains('Features: compose,ksp'))
         assertTrue(first.output.contains('Platforms: compose'))
         assertTrue(first.output.contains('Platform bindings: implementation:compose'))
         assertTrue(first.output.contains('Configuration cache entry stored.'))
@@ -45,13 +45,13 @@ class PublishedAndroidConsumerContractTest {
                 "Second Android consumer build did not reuse configuration cache:\n${second.output}".toString())
         assertTrue(second.output.contains('SimpleDSL Android variant: debug'))
         assertTrue(second.output.contains('SimpleDSL Android variant: release'))
-        assertTrue(second.output.contains('Features: compose'))
+        assertTrue(second.output.contains('Features: compose,ksp'))
         assertTrue(second.output.contains('Platform bindings: implementation:compose'))
     }
 
     @Test
-    void assemblesPublishedAndroidApplicationAndLibraryWithComposeKotlin() {
-        File fixture = copyFixture('published-android-compose-assemble')
+    void assemblesPublishedAndroidApplicationAndLibraryWithComposeAndKsp() {
+        File fixture = copyFixture('published-android-compose-ksp-assemble')
 
         BuildResult result = build(
                 fixture,

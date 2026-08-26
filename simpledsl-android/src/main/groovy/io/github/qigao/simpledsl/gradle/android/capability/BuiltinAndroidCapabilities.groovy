@@ -11,8 +11,14 @@ final class BuiltinAndroidCapabilities {
             .dependency('implementation', 'compose-ui')
             .build()
 
+    static final CapabilitySpec KSP = CapabilitySpec.builder('ksp')
+            .allow('android-application', 'android-library')
+            .externalPluginId('com.google.devtools.ksp')
+            .build()
+
     static void registerAll(CapabilityRegistry registry) {
         registry.register(COMPOSE)
+        registry.register(KSP)
     }
 
     private BuiltinAndroidCapabilities() {}

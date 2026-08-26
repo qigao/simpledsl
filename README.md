@@ -2,7 +2,7 @@
 
 SimpleDSL is a Gradle build platform for repository dependency policy and module-oriented builds. The 0.3.0 development line separates backend-neutral infrastructure from independent Java/Spring and Android project backends.
 
-> **Development status:** Phase A (shared core + Java backend), Phase B (Android backend foundation), and the Phase C Compose capability are implemented on this branch. `0.3.0` is still under development and has not been released. Room, Hilt, KSP, and other Android capabilities remain later work.
+> **Development status:** Phase A (shared core + Java backend), Phase B (Android backend foundation), Phase C (Compose), and Phase D (KSP foundation) are implemented on this branch. `0.3.0` is still under development and has not been released. Room, Hilt, and other Android capabilities remain later work.
 
 ## Requirements
 
@@ -11,7 +11,8 @@ SimpleDSL is a Gradle build platform for repository dependency policy and module
 - The Android backend baseline is AGP 9.0.1 with compileSdk 36.
 - Android uses AGP 9 built-in Kotlin support; SimpleDSL does not apply `org.jetbrains.kotlin.android`.
 - The Compose Compiler Gradle plugin is managed at 2.2.10 to match the AGP 9.0.1 built-in Kotlin line.
-- The Phase C Compose library baseline uses Compose BOM 2026.06.00 / Compose 1.11.x. Compose 1.12 moves to the API 37 line and requires a newer AGP baseline than 9.0.1.
+- KSP is managed at 2.3.9 and uses KSP2. KSP 2.3.1 introduced AGP 9 built-in Kotlin support; the older `2.2.10-2.0.2` compatibility floor is not used by SimpleDSL.
+- The Compose library baseline uses Compose BOM 2026.06.00 / Compose 1.11.x. Compose 1.12 moves to the API 37 line and requires a newer AGP baseline than 9.0.1.
 
 ## Public plugins
 
@@ -60,7 +61,7 @@ dependencyResolutionManagement {
 }
 ```
 
-The settings plugin resolves the Java and Android backends to the same SimpleDSL release version. An explicitly requested conflicting backend version fails with a `SimpleDSL version conflict` diagnostic.
+The settings plugin resolves the Java and Android backends to the same SimpleDSL release version. An explicitly requested conflicting backend version fails with a `SimpleDSL version conflict` diagnostic. Settings also owns external build-tool versions such as AGP, the Compose Compiler plugin, and KSP so module-local incompatible overrides fail early.
 
 ### Java/Spring backend
 
@@ -178,6 +179,25 @@ simpledsl {
 `jetpackCompose()` is the Android DSL sugar for the semantic capability ID `compose`; `capability('compose')` is equivalent. The public sugar is intentionally not named bare `compose()` because a Gradle Groovy configuration closure already inherits Groovy's `Closure.compose(Closure)` method, which collides with a zero-argument DSL method.
 
 The capability applies the managed `org.jetbrains.kotlin.plugin.compose` plugin, enables `buildFeatures.compose` through AGP public DSL, and binds `compose-runtime` / `compose-ui` through the existing dependency bridge. Because those aliases reference platform `compose`, the BOM is activated automatically and recorded as `implementation:compose`. Module build files do not apply `org.jetbrains.kotlin.android` or declare Compose versions directly.
+
+### KSP capability foundation
+
+KSP is an Android backend capability rather than a separate module system. Enable it after declaring an Android application or library:
+
+```groovy
+simpledsl {
+    androidApplication {
+        namespace = 'com.example.app'
+    }
+    ksp()
+}
+```
+
+`ksp()` is sugar for semantic capability ID `ksp`; `capability('ksp')` is equivalent. The capability applies the settings-managed `com.google.devtools.ksp` plugin and exposes the standard KSP configurations while keeping AGP 9 built-in Kotlin enabled. Module builds do not declare a KSP plugin version or apply `org.jetbrains.kotlin.android`.
+
+The foundation deliberately does not own processors, processor arguments, or generated-source conventions. Later Android capabilities can compose existing primitives instead of introducing another code-generation framework. For example, a Room capability can require `ksp` and bind its compiler alias to the `ksp` configuration through the existing `CapabilitySpec` dependency mechanism.
+
+KSP2 is the supported mode. KSP1 compatibility and opt-outs from AGP built-in Kotlin are not part of the Android backend contract.
 
 ### Android Components proof surface
 
@@ -339,7 +359,7 @@ simpledslCapabilities
 simpledslDoctor
 ```
 
-Android additionally exposes `simpledslAndroidVariants` as the public Android Components proof task. Compose activation appears in `simpledslCapabilities` as `Features: compose` with `Platform bindings: implementation:compose`.
+Android additionally exposes `simpledslAndroidVariants` as the public Android Components proof task. Compose + KSP activation appears in `simpledslCapabilities` as `Features: compose,ksp`, while Compose continues to report `Platform bindings: implementation:compose`.
 
 ## Artifact and publication model
 
@@ -361,15 +381,15 @@ simpledsl-core
   └── simpledsl-android
 ```
 
-- `simpledsl-core` must not carry Java/Spring tooling, AGP, or Compose tooling.
-- `simpledsl-java` depends on core, must not depend on Android, and must not carry AGP or Compose tooling.
-- `simpledsl-android` depends on core, AGP 9.0.1, and the Compose Compiler Gradle plugin 2.2.10; it must not depend on Java or carry Spring/GraalVM/jOOQ/jsonschema2pojo tooling.
+- `simpledsl-core` must not carry Java/Spring tooling, AGP, Compose tooling, or KSP tooling.
+- `simpledsl-java` depends on core, must not depend on Android, and must not carry AGP, Compose tooling, or KSP tooling.
+- `simpledsl-android` depends on core, AGP 9.0.1, the Compose Compiler Gradle plugin 2.2.10, and KSP 2.3.9; it must not depend on Java or carry Spring/GraalVM/jOOQ/jsonschema2pojo tooling.
 
 `verifyBackendIsolation` enforces these rules against the actual POMs published to the isolated test Maven repository.
 
 ## Development verification
 
-The Phase C verification contract is:
+The Phase D verification contract is:
 
 ```bash
 ./gradlew clean \
@@ -384,7 +404,7 @@ The Phase C verification contract is:
   --stacktrace
 ```
 
-The Android published-consumer suite does not use `includeBuild` or `withPluginClasspath()`. It resolves the settings and Android plugins from the isolated Maven repository, resolves AGP and the Compose Compiler plugin through the managed settings contract, verifies variants/capabilities/configuration-cache reuse, and assembles real application/library debug artifacts containing `@Composable` Kotlin sources.
+The Android published-consumer suite does not use `includeBuild` or `withPluginClasspath()`. It resolves the settings and Android plugins from the isolated Maven repository, resolves AGP, the Compose Compiler plugin, and KSP through the managed settings contract, verifies variants/capabilities/configuration-cache reuse, and assembles real application/library debug artifacts containing `@Composable` Kotlin sources with KSP active.
 
 `validatePlugins` runs as part of each plugin project's `check`. The release workflow performs the same isolated distribution verification before any Plugin Portal upload; it does not rely on fake credentials or a local `publishPlugins --validate-only` shortcut.
 
