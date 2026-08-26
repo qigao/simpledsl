@@ -3,3 +3,18 @@ java = 21
 compile-sdk = 36
 min-sdk = 24
 target-sdk = 36
+
+[versions]
+compose-bom = "2026.06.00"
+
+[libraries.compose]
+module = "androidx.compose:compose-bom"
+version.ref = "compose-bom"
+
+[libraries.compose-runtime]
+module = "androidx.compose.runtime:runtime"
+platform = "compose"
+
+[libraries.compose-ui]
+module = "androidx.compose.ui:ui"
+platform = "compose"

@@ -6,4 +6,5 @@ simpledsl {
     androidApplication {
         namespace = 'example.app'
     }
+    jetpackCompose()
 }
