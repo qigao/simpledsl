@@ -5,4 +5,9 @@ plugins {
 simpledsl {
     springService()
     web()
+    dependsOn(':model')
+}
+
+assert configurations.getByName('implementation').dependencies.any {
+    it instanceof org.gradle.api.artifacts.ProjectDependency && it.path == ':model'
 }

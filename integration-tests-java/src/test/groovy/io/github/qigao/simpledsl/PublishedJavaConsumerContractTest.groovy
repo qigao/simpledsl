@@ -110,6 +110,7 @@ class PublishedJavaConsumerContractTest {
 
         assertTrue(first.output.contains('SimpleDSL Projects'))
         assertTrue(first.output.contains(':app | app | auto | build.gradle'))
+        assertTrue(first.output.contains(':model | model | auto | build.gradle'))
         assertTrue(first.output.contains('Backend: java'))
         assertTrue(first.output.contains('Type: spring-service'))
         assertTrue(first.output.contains('Features: web'))
